@@ -5,28 +5,28 @@ using _1BillionRowChallenge.Models;
 namespace _1BillionRowChallenge.Processors;
 
 /// <summary>
-/// Changes form V2:
-///     Lines are read using spans and parsed when needed instead of using ienumerable
+/// Changes form V3:
+///     
 /// 
 /// Benchmarks:
-/// | File Size       | Execution Time | Rows per Second |
-/// |-----------------|----------------|-----------------|
-/// | 10              | 7 ms           | 1,265           |
-/// | 10,000          | 7 ms           | 1,275,575       |
-/// | 100,000         | 72 ms          | 1,373,730       |
-/// | 1,000,000       | 474 ms         | 2,109,661       |
-/// | 10,000,000      | 3,131 ms       | 3,193,445       |
-/// | 1,000,000,000   | 303,528 ms     | 3,294,587       |
-/// 19.91 MB of memory
-/// 3.3M rows a second
+///    | File Size        | Execution Time           |
+///    |------------------|--------------------------|
+///    | 10               |                      |
+///    | 10,000           |                      |
+///    | 100,000          |                     |
+///    | 1,000,000        | 
+///    | 10,000,000       |                  |
+///    | 1,000,000,000    |  |
+/// Only _________________ MB of memory
+/// ___ rows a second
 /// </summary>
-public class DataStreamProcessorV3 : IDataStreamProcessor
+public class DataStreamProcessorV4 : IDataStreamProcessor
 {
     public List<ResultRow> ProcessData(string filePath)
     {
-        IEnumerable<string> lines = ReadLinesFromFile(filePath);
-        List<ResultRow> aggregatedDataPoints = AggregateDataPoints(lines);
-        return aggregatedDataPoints;
+        using FileStream fileStream = File.OpenRead(filePath);
+        int readByte = fileStream.ReadByte();
+        return null;
     }
 
     private List<ResultRow> AggregateDataPoints(IEnumerable<string> lines)
