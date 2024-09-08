@@ -29,25 +29,17 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
         Dictionary<string, AggregatedDataPoint> result = new();
         int c = 0;
         
-        do
+        foreach ((string? cityName, decimal temperature) in ReadRowsFromFile(filePath))
         {
-            string? line = reader.ReadLine();
-            ReadOnlySpan<char> lineAsSpan = line.AsSpan();
-
-            int indexOfSeperator = lineAsSpan.IndexOf(';');
-            ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeperator);
-            ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeperator + 1);
-            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
-            
             AggregatedDataPoint aggregatedDataPoint;
-            if (result.TryGetValue(cityNameSpan.ToString(), out AggregatedDataPoint? value))
+            if (result.TryGetValue(cityName, out AggregatedDataPoint? value))
             {
                 aggregatedDataPoint = value;
             }
             else
             {
                 aggregatedDataPoint = new();
-                result[cityNameSpan.ToString()] = aggregatedDataPoint;
+                result[cityName] = aggregatedDataPoint;
             }
             if (aggregatedDataPoint.Min == null || temperature < aggregatedDataPoint.Min)
             {
@@ -59,13 +51,13 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
             }
             aggregatedDataPoint.Sum += temperature;
             aggregatedDataPoint.AmountOfDataPoints++;
-
+            
             c++;
             if (c % 100_000 == 0)
             {
                 Console.Write($"\rAggregated {c:N0} rows");
             }
-        } while (!reader.EndOfStream);
+        }
         
         return result.Select(keyPair => new ResultRow(keyPair.Key)
         {
@@ -91,29 +83,21 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
     //     return new(cityName.ToString(), temperature);
     // }
 
-    private IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
+    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
     {
         using FileStream fileStream = File.OpenRead(filePath);
         using StreamReader reader = new(fileStream);
-
         
         do
         {
             string? line = reader.ReadLine();
+            ReadOnlySpan<char> lineAsSpan = line.AsSpan();
+            int indexOfSeparator = lineAsSpan.IndexOf(';');
 
-            for (int i = 0; i < line?.Length; i++)
-            {
-                ReadOnlySpan<char> lineAsSpan = line.AsSpan();
-                if (lineAsSpan[i] == ';')
-                {
-                    ReadOnlySpan<char> cityNameSpan = "";
-                    ReadOnlySpan<char> temperatureSpan = "";
-                    cityNameSpan = lineAsSpan.Slice(0, i);
-                    temperatureSpan = lineAsSpan.Slice(i + 1);
-                    decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
-                    yield return (cityNameSpan.ToString(), temperature);
-                }
-            }
+            ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
+            ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
+            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
+            yield return (cityNameSpan.ToString(), temperature);
         } while (!reader.EndOfStream);
     }
 }
