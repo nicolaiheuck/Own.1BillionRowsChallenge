@@ -1,100 +1,85 @@
-﻿using _1BillionRowChallenge.Helpers;
-using _1BillionRowChallenge.Interfaces;
+﻿using System.Globalization;
+using _1BillionRowChallenge.Helpers;
 using _1BillionRowChallenge.Models;
-using _1BillionRowChallenge.Presenters;
-using _1BillionRowChallenge.Processors;
 using BenchmarkDotNet.Attributes;
 
 namespace _1BillionRowChallenge;
 
+[MemoryDiagnoser]
+[BaselineColumn]
 public class DataProcessorBenchmark
 {
-    private string _fileDataForMeasurements10 = null!;
-    private string _fileDataForMeasurements20 = null!;
-    private string _fileDataForMeasurements10_000 = null!;
-    private string _fileDataForMeasurements100_000 = null!;
-    private string _fileDataForMeasurements1_000_000 = null!;
-    private string _fileDataForMeasurements10_000_000 = null!;
-    private string _fileDataForMeasurements1_000_000_000 = null!;
-    private readonly IDataProcessor _dataProcessorV1 = new DataProcessorV1();
-    private readonly IPresenter _presenter = new PresenterV1();
-    // private DataProcessorV2 dataProcessorV2;
-
-    [GlobalSetup]
-    public void Setup()
-    {
-        _fileDataForMeasurements10 = File.ReadAllText(FilePathConstants.Measurements10);
-        _fileDataForMeasurements20 = File.ReadAllText(FilePathConstants.Measurements20);
-        _fileDataForMeasurements10_000 = File.ReadAllText(FilePathConstants.Measurements10_000);
-        _fileDataForMeasurements100_000 = File.ReadAllText(FilePathConstants.Measurements100_000);
-        _fileDataForMeasurements1_000_000 = File.ReadAllText(FilePathConstants.Measurements1_000_000);
-        _fileDataForMeasurements10_000_000 = File.ReadAllText(FilePathConstants.Measurements10_000_000);
-        _fileDataForMeasurements1_000_000_000 = File.ReadAllText(FilePathConstants.Measurements1_000_000_000);
-    }
-
-    // [Benchmark]
-    // public void V1_10Measurements()
+    private const string _line = "Perth;25.5";
+    
+    // [Benchmark(Baseline = true)]
+    // [WarmupCount(2)]
+    // [IterationCount(5)]
+    // public DataPoint ParseLineUsingStringSplitCalledTwice()
     // {
-    //     List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements10);
-    //     string result = _presenter.BuildResultString(resultRows);
-    //     if (Hasher.Hash(result) != CorrectHashes.Measurements10) throw new Exception("Incorrect hash");
+    //     string cityName = _line.Split(';')[0];
+    //     string temperatureAsString = _line.Split(';')[1];
+    //     decimal temperature = decimal.Parse(temperatureAsString, CultureInfo.InvariantCulture);
+    //     return new(cityName, temperature);
     // }
     //
     // [Benchmark]
-    // public void V1_20Measurements()
-    // {
-    //     List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements20);
-    //     string result = _presenter.BuildResultString(resultRows);
-    //     if (Hasher.Hash(result) != CorrectHashes.Measurements20) throw new Exception("Incorrect hash");
-    // }
-    //
-    // [Benchmark]
-    // [IterationCount(5)]
     // [WarmupCount(2)]
-    // public void V1_10_000Measurements()
-    // {
-    //     List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements10_000);
-    //     string result = _presenter.BuildResultString(resultRows);
-    //     if (Hasher.Hash(result) != CorrectHashes.Measurements10_000) throw new Exception("Incorrect hash");
-    // }
-    //
-    // [Benchmark]
     // [IterationCount(5)]
-    // [WarmupCount(2)]
-    // public void V1_100_000Measurements()
+    // public DataPoint ParseLineUsingIndexOfAndSubstring()
     // {
-    //     List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements100_000);
-    //     string result = _presenter.BuildResultString(resultRows);
-    //     if (Hasher.Hash(result) != CorrectHashes.Measurements100_000) throw new Exception("Incorrect hash");
+    //     int indexOfColon = _line.IndexOf(';');
+    //     
+    //     string cityName = _line.Substring(0, indexOfColon);
+    //     string temperatureAsString = _line.Substring(indexOfColon + 1);
+    //     decimal temperature = decimal.Parse(temperatureAsString, CultureInfo.InvariantCulture);
+    //     return new(cityName, temperature);
     // }
-
+    
     // [Benchmark]
-    // [IterationCount(5)]
     // [WarmupCount(2)]
-    // public void V1_1_000_000Measurements()
-    // {
-    //     List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements1_000_000);
-    //     string result = _presenter.BuildResultString(resultRows);
-    //     if (Hasher.Hash(result) != CorrectHashes.Measurements1_000_000) throw new Exception("Incorrect hash");
-    // }
-    //
-    // [Benchmark]
     // [IterationCount(5)]
-    // [WarmupCount(2)]
-    // public void V1_10_000_000Measurements()
+    // public DataPoint ParseLineUsingStringSplitCalledOnce()
     // {
-    //     List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements10_000_000);
-    //     string result = _presenter.BuildResultString(resultRows);
-    //     if (Hasher.Hash(result) != CorrectHashes.Measurements10_000_000) throw new Exception("Incorrect hash");
+    //     string[] splitLine = _line.Split(';');
+    //     string cityName = splitLine[0];
+    //     string temperatureAsString = splitLine[1];
+    //     decimal temperature = decimal.Parse(temperatureAsString, CultureInfo.InvariantCulture);
+    //     return new(cityName, temperature);
     // }
-
-    [Benchmark]
-    [IterationCount(5)]
+    
+    [Benchmark(Baseline = true)]
     [WarmupCount(2)]
-    public void V1_1_000_000_000Measurements()
+    [IterationCount(5)]
+    public DataPoint ParseLineUsingSpans()
     {
-        List<ResultRow> resultRows = _dataProcessorV1.ProcessData(_fileDataForMeasurements1_000_000_000);
-        string result = _presenter.BuildResultString(resultRows);
-        if (Hasher.Hash(result) != CorrectHashes.Measurements1_000_000_000) throw new Exception("Incorrect hash");
+        ReadOnlySpan<char> lineAsSpan = _line.AsSpan();
+        int indexOfColon = lineAsSpan.IndexOf(';');
+        
+        ReadOnlySpan<char> cityName = lineAsSpan.Slice(0, indexOfColon);
+        ReadOnlySpan<char> temperatureAsSpan = lineAsSpan.Slice(indexOfColon + 1);
+        decimal temperature = decimal.Parse(temperatureAsSpan, CultureInfo.InvariantCulture);
+        return new(cityName.ToString(), temperature);
+    }
+    
+    [Benchmark]
+    [WarmupCount(2)]
+    [IterationCount(5)]
+    public DataPoint ParseLineUsingOwnIndexOf()
+    {
+        ReadOnlySpan<char> lineAsSpan = _line.AsSpan();
+        ReadOnlySpan<char> cityName = null;
+        ReadOnlySpan<char> temperatureAsSpan = null;
+        for (int i = 0; i < lineAsSpan.Length; i++)
+        {
+            if (lineAsSpan[i] == ';')
+            {
+                cityName = lineAsSpan.Slice(0, i);
+                temperatureAsSpan = lineAsSpan.Slice(i + 1);
+                break;
+            }
+        }
+        
+        decimal temperature = decimal.Parse(temperatureAsSpan, CultureInfo.InvariantCulture);
+        return new(cityName.ToString(), temperature);
     }
 }

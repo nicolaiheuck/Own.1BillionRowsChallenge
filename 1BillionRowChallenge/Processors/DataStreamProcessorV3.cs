@@ -33,9 +33,9 @@ public class DataStreamProcessorV3 : IDataStreamProcessor
     {
         int i = 0;
         Dictionary<string, AggregatedDataPoint> result = new();
-        IEnumerable<DataPoint> dataPoints = lines.Select(ParseLine);
-        foreach (DataPoint dataPoint in dataPoints)
+        foreach (string line in lines)
         {
+            DataPoint dataPoint = ParseLine(line); 
             AggregatedDataPoint aggregatedDataPoint;
             if (result.TryGetValue(dataPoint.CityName, out AggregatedDataPoint? value))
             {
@@ -46,11 +46,11 @@ public class DataStreamProcessorV3 : IDataStreamProcessor
                 aggregatedDataPoint = new();
                 result[dataPoint.CityName] = aggregatedDataPoint;
             }
-            if (dataPoint.Temperature < aggregatedDataPoint.Min || aggregatedDataPoint.Min == null) // NH_TODO: Does it need to check for null? Would it not return false anyway?
+            if (aggregatedDataPoint.Min == null || dataPoint.Temperature < aggregatedDataPoint.Min)
             {
                 aggregatedDataPoint.Min = dataPoint.Temperature;
             }
-            if (dataPoint.Temperature > aggregatedDataPoint.Max || aggregatedDataPoint.Max == null)
+            if (aggregatedDataPoint.Max == null || dataPoint.Temperature > aggregatedDataPoint.Max)
             {
                 aggregatedDataPoint.Max = dataPoint.Temperature;
             }
@@ -74,13 +74,13 @@ public class DataStreamProcessorV3 : IDataStreamProcessor
 
     private DataPoint ParseLine(string line)
     {
-        // int indexOfColon = FindIndexOfColon(line);
-        int indexOfColon = line.IndexOf(';');
+        ReadOnlySpan<char> lineAsSpan = line.AsSpan();
+        int indexOfColon = lineAsSpan.IndexOf(';');
         
-        string cityName = line.Substring(0, indexOfColon);
-        string temperatureAsString = line.Substring(indexOfColon + 1);
-        decimal temperature = decimal.Parse(temperatureAsString, CultureInfo.InvariantCulture);
-        return new(cityName, temperature);
+        ReadOnlySpan<char> cityName = lineAsSpan.Slice(0, indexOfColon);
+        ReadOnlySpan<char> temperatureAsSpan = lineAsSpan.Slice(indexOfColon + 1);
+        decimal temperature = decimal.Parse(temperatureAsSpan, CultureInfo.InvariantCulture);
+        return new(cityName.ToString(), temperature);
     }
 
     private IEnumerable<string> ReadLinesFromFile(string filePath)
