@@ -50,10 +50,10 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
             aggregatedDataPoint.AmountOfDataPoints++;
             
             i++;
-            if (i % 100_000 == 0)
-            {
-                Console.Write($"\r Aggregated {i:N0} rows");
-            }
+            // if (i % 100 == 0)
+            // {
+            //     Console.Write($"\r Aggregated {i:N0} rows");
+            // }
         }
         return result.Select(keyPair => new ResultRow(keyPair.Key)
         {
@@ -82,39 +82,26 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
     private IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
     {
         using FileStream fileStream = File.OpenRead(filePath);
+        using StreamReader reader = new(fileStream);
 
-        int readByte = 0;
-        byte[] cityNameBuffer = new byte[50];
-        byte[] temperatureBuffer = new byte[50];
-        int characterIndex = 0;
-        int seperatorIndex = 0;
-        int lineStartIndex = 0;
+        
         do
         {
-            readByte = fileStream.ReadByte();
-            characterIndex++;
+            string? line = reader.ReadLine();
 
-            if (readByte == ';')
+            for (int i = 0; i < line?.Length; i++)
             {
-                seperatorIndex = (int)fileStream.Position;
-                fileStream.Position = lineStartIndex;
-                fileStream.Read(cityNameBuffer, 0, characterIndex - lineStartIndex - 1);
-                fileStream.Position++;
+                ReadOnlySpan<char> lineAsSpan = line.AsSpan();
+                if (lineAsSpan[i] == ';')
+                {
+                    ReadOnlySpan<char> cityNameSpan = "";
+                    ReadOnlySpan<char> temperatureSpan = "";
+                    cityNameSpan = lineAsSpan.Slice(0, i);
+                    temperatureSpan = lineAsSpan.Slice(i + 1);
+                    decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
+                    yield return (cityNameSpan.ToString(), temperature);
+                }
             }
-            else if (readByte == '\n')
-            {
-                fileStream.Position = seperatorIndex;
-                fileStream.Read(temperatureBuffer, 0, characterIndex - seperatorIndex - 1);
-                fileStream.Position++;
-                string decimalAsString = System.Text.Encoding.UTF8.GetString(temperatureBuffer).Replace("\0", "");
-                decimal temperature = decimal.Parse(decimalAsString, CultureInfo.InvariantCulture);
-                string cityName = System.Text.Encoding.UTF8.GetString(cityNameBuffer).Replace("\0", "");
-                yield return (cityName, temperature);
-                lineStartIndex = (int)fileStream.Position;
-                seperatorIndex = 0;
-                cityNameBuffer = new byte[cityNameBuffer.Length];
-                temperatureBuffer = new byte[temperatureBuffer.Length];
-            }
-        } while (readByte != -1);
+        } while (!reader.EndOfStream);
     }
 }
