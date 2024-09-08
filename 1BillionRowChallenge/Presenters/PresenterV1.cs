@@ -1,11 +1,13 @@
 ﻿using System.Globalization;
 using System.Text;
+using _1BillionRowChallenge.Interfaces;
+using _1BillionRowChallenge.Processors;
 
-namespace _1BillionRowChallenge;
+namespace _1BillionRowChallenge.Presenters;
 
-public class Presenter(List<ResultRow> data)
+public class PresenterV1 : IPresenter
 {
-    public string BuildResultString()
+    public string BuildResultString(List<ResultRow> data)
     {
         StringBuilder builder = new();
         builder.Append('{');

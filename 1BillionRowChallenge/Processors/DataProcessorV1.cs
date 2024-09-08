@@ -1,12 +1,13 @@
 ﻿using System.Globalization;
+using _1BillionRowChallenge.Interfaces;
 
-namespace _1BillionRowChallenge;
+namespace _1BillionRowChallenge.Processors;
 
-public class DataProcessor(string filePath)
+public class DataProcessorV1 : IDataProcessor
 {
-    public List<ResultRow> ProcessData()
+    public List<ResultRow> ProcessData(string filePath)
     {
-        List<string> data = ReadDataFromFile();
+        List<string> data = ReadLines(filePath);
         IEnumerable<DataPoint> dataPoints = ParseDataFromFile(data);
         List<ResultRow> aggregatedDataPoints = AggregateDataPoints(dataPoints);
         return aggregatedDataPoints;
@@ -44,9 +45,9 @@ public class DataProcessor(string filePath)
         }
     }
 
-    private List<string> ReadDataFromFile()
+    private List<string> ReadLines(string fileData)
     {
-        return File.ReadAllLines(filePath).ToList();
+        return fileData.Split("\n", StringSplitOptions.RemoveEmptyEntries).ToList();
     }
 }
 public record DataPoint(string CityName, decimal Temperature)
