@@ -9,14 +9,14 @@ namespace _1BillionRowChallenge.Processors;
 ///     Lines are read using spans and parsed when needed instead of using ienumerable
 /// 
 /// Benchmarks:
-/// | File Size       | Execution Time | Rows per Second |
-/// |-----------------|----------------|-----------------|
-/// | 10              | 7 ms           | 1,265           |
-/// | 10,000          | 7 ms           | 1,275,575       |
-/// | 100,000         | 72 ms          | 1,373,730       |
-/// | 1,000,000       | 474 ms         | 2,109,661       |
-/// | 10,000,000      | 3,131 ms       | 3,193,445       |
-/// | 1,000,000,000   | 303,528 ms     | 3,294,587       |
+/// | File Size       | Execution Time | Rows per Second              |
+/// |-----------------|----------------|------------------------------|
+/// | 10              | 7 ms           | 1,265                        |
+/// | 10,000          | 7 ms           | 1,275,575                    |
+/// | 100,000         | 72 ms          | 1,373,730                    |
+/// | 1,000,000       | 474 ms         | 2,109,661                    |
+/// | 10,000,000      | 3,131 ms       | 3,193,445                    |
+/// | 1,000,000,000   | 303,528 ms     | 3,294,587 (5.0 minutes)      |
 /// 19.91 MB of memory
 /// 3.3M rows a second
 /// </summary>

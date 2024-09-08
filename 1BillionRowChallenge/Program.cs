@@ -14,6 +14,7 @@ public class Program
         // var summary = BenchmarkDotNet.Running.BenchmarkRunner.Run<DataProcessorBenchmark>();
         // PrintHash(@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-1_000_000_000.out");
         // TestVersion();
+
         IDataStreamProcessor processor = new DataStreamProcessorV4();
         // BenchmarkProcessor(processor, 10, FilePathConstants.Measurements10, CorrectHashes.Measurements10);
         // BenchmarkProcessor(processor, 10_000, FilePathConstants.Measurements10_000, CorrectHashes.Measurements10_000);
