@@ -14,13 +14,13 @@ public class Program
         // var summary = BenchmarkRunner.Run<DataProcessorBenchmark>();
         // PrintHash(@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-1_000_000_000.out");
         // TestVersion();
-        IDataStreamProcessor processor = new DataStreamProcessorV2();
+        IDataStreamProcessor processor = new DataStreamProcessorV3();
         // BenchmarkProcessor(processor, 10, FilePathConstants.Measurements10, CorrectHashes.Measurements10);
         // BenchmarkProcessor(processor, 10_000, FilePathConstants.Measurements10_000, CorrectHashes.Measurements10_000);
         // BenchmarkProcessor(processor, 100_000, FilePathConstants.Measurements100_000, CorrectHashes.Measurements100_000);
         // BenchmarkProcessor(processor, 1_000_000, FilePathConstants.Measurements1_000_000, CorrectHashes.Measurements1_000_000);
-        // BenchmarkProcessor(processor, 10_000_000, FilePathConstants.Measurements10_000_000, CorrectHashes.Measurements10_000_000);
-        BenchmarkProcessor(processor, 1_000_000_000, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
+        BenchmarkProcessor(processor, 10_000_000, FilePathConstants.Measurements10_000_000, CorrectHashes.Measurements10_000_000);
+        // BenchmarkProcessor(processor, 1_000_000_000, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
     }
 
     private static void BenchmarkProcessor(IDataStreamProcessor processor, long rowCount, string filePath, string correctHash)

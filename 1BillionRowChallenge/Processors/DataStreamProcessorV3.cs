@@ -5,41 +5,41 @@ using _1BillionRowChallenge.Models;
 namespace _1BillionRowChallenge.Processors;
 
 /// <summary>
-/// Changes form V1:
-///     Instead of using group by it uses a dictionary and therefore shouldn't need to create a list of 1B objects
+/// Changes form V2:
+///     
 /// 
 /// Benchmarks:
 ///    | File Size        | Execution Time           |
 ///    |------------------|--------------------------|
-///    | 10               | 7 ms                     |
-///    | 10,000           | 8 ms                     |
-///    | 100,000          | 46 ms                    |
-///    | 1,000,000        | 542 ms                   |
-///    | 10,000,000       | 3,931 ms                 |
-///    | 1,000,000,000    | 389,512 ms (6.4 minutes) |
-/// Only 18,61 MB of memory
-/// 2.4 million rows a second
+///    | 10               |                      |
+///    | 10,000           |                      |
+///    | 100,000          |                     |
+///    | 1,000,000        | 
+///    | 10,000,000       |                  |
+///    | 1,000,000,000    |  |
+/// Only _________________ MB of memory
+/// ___ rows a second
 /// </summary>
-public class DataStreamProcessorV2 : IDataStreamProcessor
+public class DataStreamProcessorV3 : IDataStreamProcessor
 {
     public List<ResultRow> ProcessData(string filePath)
     {
-        IEnumerable<string> data = ReadLinesFromFile(filePath);
-        IEnumerable<DataPoint> dataPoints = ParseDataFromFile(data);
-        List<ResultRow> aggregatedDataPoints = AggregateDataPoints(dataPoints);
+        IEnumerable<string> lines = ReadLinesFromFile(filePath);
+        List<ResultRow> aggregatedDataPoints = AggregateDataPoints(lines);
         return aggregatedDataPoints;
     }
 
-    private List<ResultRow> AggregateDataPoints(IEnumerable<DataPoint> dataPoints)
+    private List<ResultRow> AggregateDataPoints(IEnumerable<string> lines)
     {
         int i = 0;
         Dictionary<string, AggregatedDataPoint> result = new();
+        IEnumerable<DataPoint> dataPoints = lines.Select(ParseLine);
         foreach (DataPoint dataPoint in dataPoints)
         {
-            AggregatedDataPoint aggregatedDataPoint = null;
-            if (result.ContainsKey(dataPoint.CityName))
+            AggregatedDataPoint aggregatedDataPoint;
+            if (result.TryGetValue(dataPoint.CityName, out AggregatedDataPoint? value))
             {
-                aggregatedDataPoint = result[dataPoint.CityName];
+                aggregatedDataPoint = value;
             }
             else
             {
@@ -72,16 +72,15 @@ public class DataStreamProcessorV2 : IDataStreamProcessor
         }).ToList();
     }
 
-    private IEnumerable<DataPoint> ParseDataFromFile(IEnumerable<string> lines)
+    private DataPoint ParseLine(string line)
     {
-        foreach (string line in lines)
-        {
-            string[] splitValue = line.Split(";");
-            string cityName = splitValue[0];
-            string temperatureAsString = splitValue[1];
-            decimal temperature = decimal.Parse(temperatureAsString, CultureInfo.InvariantCulture);
-            yield return new(cityName, temperature);
-        }
+        // int indexOfColon = FindIndexOfColon(line);
+        int indexOfColon = line.IndexOf(';');
+        
+        string cityName = line.Substring(0, indexOfColon);
+        string temperatureAsString = line.Substring(indexOfColon + 1);
+        decimal temperature = decimal.Parse(temperatureAsString, CultureInfo.InvariantCulture);
+        return new(cityName, temperature);
     }
 
     private IEnumerable<string> ReadLinesFromFile(string filePath)
