@@ -24,38 +24,40 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
 {
     public List<ResultRow> ProcessData(string filePath)
     {
-        using FileStream fileStream = File.OpenRead(filePath);
-        using StreamReader reader = new(fileStream);
-        Dictionary<string, AggregatedDataPoint> result = new();
-        int c = 0;
+        Dictionary<string, AggregatedDataPointV4> result = new();
+        int i = 0;
         
         foreach ((string? cityName, decimal temperature) in ReadRowsFromFile(filePath))
         {
-            AggregatedDataPoint aggregatedDataPoint;
-            if (result.TryGetValue(cityName, out AggregatedDataPoint? value))
+            AggregatedDataPointV4 aggregatedDataPoint;
+            if (result.TryGetValue(cityName, out AggregatedDataPointV4? value))
             {
                 aggregatedDataPoint = value;
             }
             else
             {
-                aggregatedDataPoint = new();
+                aggregatedDataPoint = new()
+                {
+                    Min = int.MaxValue,
+                    Max = int.MinValue,
+                };
                 result[cityName] = aggregatedDataPoint;
             }
-            if (aggregatedDataPoint.Min == null || temperature < aggregatedDataPoint.Min)
+            if (temperature < aggregatedDataPoint.Min)
             {
                 aggregatedDataPoint.Min = temperature;
             }
-            if (aggregatedDataPoint.Max == null || temperature > aggregatedDataPoint.Max)
+            if (temperature > aggregatedDataPoint.Max)
             {
                 aggregatedDataPoint.Max = temperature;
             }
             aggregatedDataPoint.Sum += temperature;
             aggregatedDataPoint.AmountOfDataPoints++;
             
-            c++;
-            if (c % 100_000 == 0)
+            i++;
+            if (i % 100_000 == 0)
             {
-                Console.Write($"\rAggregated {c:N0} rows");
+                Console.Write($"\rAggregated {i:N0} rows");
             }
         }
         
@@ -85,12 +87,8 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
 
     private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
     {
-        using FileStream fileStream = File.OpenRead(filePath);
-        using StreamReader reader = new(fileStream);
-        
-        do
+        foreach (string line in File.ReadLines(filePath))
         {
-            string? line = reader.ReadLine();
             ReadOnlySpan<char> lineAsSpan = line.AsSpan();
             int indexOfSeparator = lineAsSpan.IndexOf(';');
 
@@ -98,6 +96,6 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
             ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
             decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
             yield return (cityNameSpan.ToString(), temperature);
-        } while (!reader.EndOfStream);
+        }
     }
 }
