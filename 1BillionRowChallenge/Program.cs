@@ -25,13 +25,19 @@ public class Program
 
     private static void TestVersion()
     {
-        string fileData = File.ReadAllText(FilePathConstants.Measurements10_000_000);
+        string fileData = "";
+        TimeLogger.LogExecution("Reading file data", () =>
+        {
+            fileData = File.ReadAllText(FilePathConstants.Measurements1_000_000_000);
+        });
+
+        return;
         IDataProcessor processorV1 = new DataProcessorV1();
         List<ResultRow> processedData = processorV1.ProcessData(fileData);
         IPresenter presenter = new PresenterV1();
         string result = presenter.BuildResultString(processedData);
         
-        if (Hasher.Hash(result) == CorrectHashes.Measurements10_000_000)
+        if (Hasher.Hash(result) == CorrectHashes.Measurements1_000_000_000)
         {
             Console.WriteLine("Correct!");
         }
