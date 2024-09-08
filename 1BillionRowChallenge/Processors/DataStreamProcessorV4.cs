@@ -24,19 +24,30 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
 {
     public List<ResultRow> ProcessData(string filePath)
     {
+        using FileStream fileStream = File.OpenRead(filePath);
+        using StreamReader reader = new(fileStream);
         Dictionary<string, AggregatedDataPoint> result = new();
-        int i = 0;
-        foreach ((string? cityName, decimal temperature) in ReadRowsFromFile(filePath))
+        int c = 0;
+        
+        do
         {
+            string? line = reader.ReadLine();
+            ReadOnlySpan<char> lineAsSpan = line.AsSpan();
+
+            int indexOfSeperator = lineAsSpan.IndexOf(';');
+            ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeperator);
+            ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeperator + 1);
+            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
+            
             AggregatedDataPoint aggregatedDataPoint;
-            if (result.TryGetValue(cityName, out AggregatedDataPoint? value))
+            if (result.TryGetValue(cityNameSpan.ToString(), out AggregatedDataPoint? value))
             {
                 aggregatedDataPoint = value;
             }
             else
             {
                 aggregatedDataPoint = new();
-                result[cityName] = aggregatedDataPoint;
+                result[cityNameSpan.ToString()] = aggregatedDataPoint;
             }
             if (aggregatedDataPoint.Min == null || temperature < aggregatedDataPoint.Min)
             {
@@ -48,13 +59,14 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
             }
             aggregatedDataPoint.Sum += temperature;
             aggregatedDataPoint.AmountOfDataPoints++;
-            
-            i++;
-            // if (i % 100 == 0)
-            // {
-            //     Console.Write($"\r Aggregated {i:N0} rows");
-            // }
-        }
+
+            c++;
+            if (c % 100_000 == 0)
+            {
+                Console.Write($"\rAggregated {c:N0} rows");
+            }
+        } while (!reader.EndOfStream);
+        
         return result.Select(keyPair => new ResultRow(keyPair.Key)
         {
             Min = keyPair.Value.Min,
