@@ -9,25 +9,25 @@ namespace _1BillionRowChallenge.Processors;
 ///     
 /// 
 /// Benchmarks:
-///    | File Size        | Execution Time           |
-///    |------------------|--------------------------|
-///    | 10               |                      |
-///    | 10,000           |                      |
-///    | 100,000          |                     |
-///    | 1,000,000        | 
-///    | 10,000,000       |                  |
-///    | 1,000,000,000    |  |
-/// Only _________________ MB of memory
-/// ___ rows a second
+/// | File Size     | Execution Time | Rows per Second           |
+/// |---------------|----------------|---------------------------|
+/// | 10            | 9 ms           | 1,012                     |
+/// | 10,000        | 9 ms           | 1,083,236                 |
+/// | 100,000       | 35 ms          | 2,813,335                 |
+/// | 1,000,000     | 365 ms         | 2,736,968                 |
+/// | 10,000,000    | 2,470 ms       | 4,047,937                 |
+/// | 1,000,000,000 | 243749ms       | 4.102.568 (4.0 minutes)   | //NH_TODO: Was incorrect :(
+/// Only 20 MB of memory
+/// 4.1M rows a second
 /// </summary>
-public class DataStreamProcessorV4 : IDataStreamProcessorV4
+public class DataStreamProcessorV4 : IDataStreamProcessorV4 //NH_TODO: For V5. MemoryMappedFile.CreateFromFile
 {
     public List<ResultRowV4> ProcessData(string filePath)
     {
         Dictionary<string, AggregatedDataPointV4> result = new();
         int i = 0;
         
-        foreach ((string? cityName, double temperature) in ReadRowsFromFile(filePath))
+        foreach ((string? cityName, decimal temperature) in ReadRowsFromFile(filePath))
         {
             AggregatedDataPointV4 aggregatedDataPoint;
             if (result.TryGetValue(cityName, out AggregatedDataPointV4? value))
@@ -55,7 +55,7 @@ public class DataStreamProcessorV4 : IDataStreamProcessorV4
             aggregatedDataPoint.AmountOfDataPoints++;
             
             i++;
-            if (i % 100_000 == 0)
+            if (i % 1_000_000 == 0)
             {
                 Console.Write($"\rAggregated {i:N0} rows");
             }
@@ -69,7 +69,7 @@ public class DataStreamProcessorV4 : IDataStreamProcessorV4
         }).ToList();
     }
 
-    private static IEnumerable<ValueTuple<string, double>> ReadRowsFromFile(string filePath)
+    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
     {
         foreach (string line in File.ReadLines(filePath))
         {
@@ -78,7 +78,7 @@ public class DataStreamProcessorV4 : IDataStreamProcessorV4
 
             ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
             ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
-            double temperature = double.Parse(temperatureSpan, CultureInfo.InvariantCulture);
+            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
             yield return (cityNameSpan.ToString(), temperature);
         }
     }

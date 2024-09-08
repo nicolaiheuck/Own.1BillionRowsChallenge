@@ -2,11 +2,11 @@
 
 public class AggregatedDataPointV4
 {
-    public double Min;
+    public decimal Min;
 
-    public double Max;
+    public decimal Max;
 
-    public double Sum;
+    public decimal Sum;
 
     public ushort AmountOfDataPoints;
 }

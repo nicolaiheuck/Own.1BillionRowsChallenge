@@ -4,9 +4,9 @@ public class ResultRowV4(string cityName)
 {
     public string CityName { get; set; } = cityName;
 
-    public double Min { get; set; }
+    public decimal Min { get; set; }
 
-    public double Mean { get; set; }
+    public decimal Mean { get; set; }
 
-    public double Max { get; set; }
+    public decimal Max { get; set; }
 }
