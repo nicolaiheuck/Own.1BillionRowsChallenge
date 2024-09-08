@@ -20,14 +20,14 @@ namespace _1BillionRowChallenge.Processors;
 /// Only _________________ MB of memory
 /// ___ rows a second
 /// </summary>
-public class DataStreamProcessorV4 : IDataStreamProcessor
+public class DataStreamProcessorV4 : IDataStreamProcessorV4
 {
-    public List<ResultRow> ProcessData(string filePath)
+    public List<ResultRowV4> ProcessData(string filePath)
     {
         Dictionary<string, AggregatedDataPointV4> result = new();
         int i = 0;
         
-        foreach ((string? cityName, decimal temperature) in ReadRowsFromFile(filePath))
+        foreach ((string? cityName, double temperature) in ReadRowsFromFile(filePath))
         {
             AggregatedDataPointV4 aggregatedDataPoint;
             if (result.TryGetValue(cityName, out AggregatedDataPointV4? value))
@@ -61,7 +61,7 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
             }
         }
         
-        return result.Select(keyPair => new ResultRow(keyPair.Key)
+        return result.Select(keyPair => new ResultRowV4(keyPair.Key)
         {
             Min = keyPair.Value.Min,
             Max = keyPair.Value.Max,
@@ -69,23 +69,7 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
         }).ToList();
     }
 
-    // private List<ResultRow> AggregateDataPoints(string cityName, decimal temperature)
-    // {
-    //
-    // }
-
-    // private DataPoint ParseLine(string line)
-    // {
-    //     ReadOnlySpan<char> lineAsSpan = line.AsSpan();
-    //     int indexOfColon = lineAsSpan.IndexOf(';');
-    //     
-    //     ReadOnlySpan<char> cityName = lineAsSpan.Slice(0, indexOfColon);
-    //     ReadOnlySpan<char> temperatureAsSpan = lineAsSpan.Slice(indexOfColon + 1);
-    //     decimal temperature = decimal.Parse(temperatureAsSpan, CultureInfo.InvariantCulture);
-    //     return new(cityName.ToString(), temperature);
-    // }
-
-    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
+    private static IEnumerable<ValueTuple<string, double>> ReadRowsFromFile(string filePath)
     {
         foreach (string line in File.ReadLines(filePath))
         {
@@ -94,7 +78,7 @@ public class DataStreamProcessorV4 : IDataStreamProcessor
 
             ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
             ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
-            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
+            double temperature = double.Parse(temperatureSpan, CultureInfo.InvariantCulture);
             yield return (cityNameSpan.ToString(), temperature);
         }
     }

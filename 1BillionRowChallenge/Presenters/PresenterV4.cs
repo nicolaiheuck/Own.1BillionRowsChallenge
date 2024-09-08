@@ -7,21 +7,19 @@ using _1BillionRowChallenge.Processors;
 
 namespace _1BillionRowChallenge.Presenters;
 
-public class PresenterV1 : IPresenter
+public class PresenterV4 : IPresenterV4
 {
-    public string BuildResultString(List<ResultRow> data)
+    public string BuildResultString(List<ResultRowV4> data)
     {
         data.Sort((x, y) => string.Compare(x.CityName, y.CityName, StringComparison.Ordinal));
         StringBuilder builder = new();
         builder.Append('{');
 
-        foreach (ResultRow row in data)
+        foreach (ResultRowV4 row in data)
         {
-            //{Adelaide=15.0/15.0/15.0, Cabo San Lucas=14.9/14.9/14.9, Dodoma=22.2/22.2/22.2, Halifax=12.9/12.9/12.9, Karachi=15.4/15.4/15.4, Pittsburgh=9.7/9.7/9.7, Ségou=25.7/25.7/25.7, Tauranga=38.2/38.2/38.2, Xi'an=24.2/24.2/24.2, Zagreb=12.2/12.2/12.2}
-
-            string min = FixStupidNegativeZero(row.Min?.ToString("F1", CultureInfo.InvariantCulture))!;
-            string mean = FixStupidNegativeZero(row.Mean?.ToString("F1", CultureInfo.InvariantCulture))!;
-            string max = FixStupidNegativeZero(row.Max?.ToString("F1", CultureInfo.InvariantCulture))!;
+            string min = FixStupidNegativeZero(row.Min.ToString("F1", CultureInfo.InvariantCulture));
+            string mean = FixStupidNegativeZero(row.Mean.ToString("F1", CultureInfo.InvariantCulture));
+            string max = FixStupidNegativeZero(row.Max.ToString("F1", CultureInfo.InvariantCulture));
             builder.Append($"{row.CityName}={min}/{mean}/{max}");
 
             bool last = data.IndexOf(row) == data.Count - 1;
@@ -35,7 +33,7 @@ public class PresenterV1 : IPresenter
         return builder.ToString();
     }
 
-    private string? FixStupidNegativeZero(string? value)
+    private string FixStupidNegativeZero(string value)
     {
         if (value == "-0.0")
         {

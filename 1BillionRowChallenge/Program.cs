@@ -15,7 +15,7 @@ public class Program
         // PrintHash(@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-1_000_000_000.out");
         // TestVersion();
 
-        IDataStreamProcessor processor = new DataStreamProcessorV4();
+        IDataStreamProcessorV4 processor = new DataStreamProcessorV4();
         // BenchmarkProcessor(processor, 10, FilePathConstants.Measurements10, CorrectHashes.Measurements10);
         // BenchmarkProcessor(processor, 10_000, FilePathConstants.Measurements10_000, CorrectHashes.Measurements10_000);
         // BenchmarkProcessor(processor, 100_000, FilePathConstants.Measurements100_000, CorrectHashes.Measurements100_000);
@@ -26,14 +26,14 @@ public class Program
         // BenchmarkProcessor(processor, 1_000_000_000, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
     }
 
-    private static void BenchmarkProcessor(IDataStreamProcessor processor, long rowCount, string filePath, string correctHash)
+    private static void BenchmarkProcessor(IDataStreamProcessorV4 processor, long rowCount, string filePath, string correctHash)
     {
-        List<ResultRow> processedData = new();
+        List<ResultRowV4> processedData = new();
         TimeLogger.LogExecution($"Processing {rowCount:N0} rows using {processor.GetType().Name}", () =>
         {
             processedData = processor.ProcessData(filePath);
         }, rowCount);
-        IPresenter presenter = new PresenterV1();
+        IPresenterV4 presenter = new PresenterV4();
         string result = presenter.BuildResultString(processedData);
         
         if (Hasher.Hash(result) == correctHash)
