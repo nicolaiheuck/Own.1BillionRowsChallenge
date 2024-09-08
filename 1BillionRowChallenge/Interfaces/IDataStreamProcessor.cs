@@ -2,7 +2,7 @@
 
 namespace _1BillionRowChallenge.Interfaces;
 
-public interface IDataProcessor
+public interface IDataStreamProcessor
 {
-    List<ResultRow> ProcessData(string fileData);
+    List<ResultRow> ProcessData(string filePath);
 }

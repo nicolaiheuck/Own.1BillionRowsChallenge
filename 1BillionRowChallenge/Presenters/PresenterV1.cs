@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Text;
 using _1BillionRowChallenge.Interfaces;
+using _1BillionRowChallenge.Models;
 using _1BillionRowChallenge.Processors;
 
 namespace _1BillionRowChallenge.Presenters;

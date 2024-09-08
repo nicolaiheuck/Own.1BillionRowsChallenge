@@ -4,11 +4,20 @@ using _1BillionRowChallenge.Models;
 
 namespace _1BillionRowChallenge.Processors;
 
-public class DataProcessorV1 : IDataProcessor
+/// <summary>
+/// Benchmarks:
+///     10:         8       ms
+///     10.000:     18      ms
+///     100.000:    80      ms
+///     1.000.000:  1.069   ms
+///     10.000.000: 9.652   ms
+///     1.000.000.000: Killed after using 20 GB of memory
+/// </summary>
+public class DataStreamProcessorV1 : IDataStreamProcessor
 {
     public List<ResultRow> ProcessData(string filePath)
     {
-        List<string> data = ReadLines(filePath);
+        IEnumerable<string> data = ReadLinesFromFile(filePath);
         IEnumerable<DataPoint> dataPoints = ParseDataFromFile(data);
         List<ResultRow> aggregatedDataPoints = AggregateDataPoints(dataPoints);
         return aggregatedDataPoints;
@@ -34,7 +43,7 @@ public class DataProcessorV1 : IDataProcessor
         return result;
     }
 
-    private IEnumerable<DataPoint> ParseDataFromFile(List<string> lines)
+    private IEnumerable<DataPoint> ParseDataFromFile(IEnumerable<string> lines)
     {
         foreach (string line in lines)
         {
@@ -46,8 +55,8 @@ public class DataProcessorV1 : IDataProcessor
         }
     }
 
-    private List<string> ReadLines(string fileData)
+    private IEnumerable<string> ReadLinesFromFile(string filePath)
     {
-        return fileData.Split("\n", StringSplitOptions.RemoveEmptyEntries).ToList();
+        return File.ReadLines(filePath);
     }
 }
