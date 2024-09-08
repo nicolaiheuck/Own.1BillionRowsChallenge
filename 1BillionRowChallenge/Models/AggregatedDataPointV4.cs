@@ -8,5 +8,5 @@ public class AggregatedDataPointV4
 
     public double Sum;
 
-    public double AmountOfDataPoints;
+    public ushort AmountOfDataPoints;
 }
