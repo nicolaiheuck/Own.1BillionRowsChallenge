@@ -4,7 +4,6 @@ using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
 using _1BillionRowChallenge.Presenters;
 using _1BillionRowChallenge.Processors;
-using BenchmarkDotNet.Running;
 
 namespace _1BillionRowChallenge;
 
@@ -15,13 +14,13 @@ public class Program
         // var summary = BenchmarkRunner.Run<DataProcessorBenchmark>();
         // PrintHash(@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-1_000_000_000.out");
         // TestVersion();
-        // BenchmarkProcessor(new DataStreamProcessorV1(), FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
-        // BenchmarkProcessor(new DataStreamProcessorV1(), 10, FilePathConstants.Measurements10, CorrectHashes.Measurements10);
-        // BenchmarkProcessor(new DataStreamProcessorV1(), 10_000, FilePathConstants.Measurements10_000, CorrectHashes.Measurements10_000);
-        // BenchmarkProcessor(new DataStreamProcessorV1(), 100_000, FilePathConstants.Measurements100_000, CorrectHashes.Measurements100_000);
-        // BenchmarkProcessor(new DataStreamProcessorV1(), 1_000_000, FilePathConstants.Measurements1_000_000, CorrectHashes.Measurements1_000_000);
-        // BenchmarkProcessor(new DataStreamProcessorV1(), 10_000_000, FilePathConstants.Measurements10_000_000, CorrectHashes.Measurements10_000_000);
-        BenchmarkProcessor(new DataStreamProcessorV1(), 1_000_000_000, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
+        IDataStreamProcessor processor = new DataStreamProcessorV2();
+        // BenchmarkProcessor(processor, 10, FilePathConstants.Measurements10, CorrectHashes.Measurements10);
+        // BenchmarkProcessor(processor, 10_000, FilePathConstants.Measurements10_000, CorrectHashes.Measurements10_000);
+        // BenchmarkProcessor(processor, 100_000, FilePathConstants.Measurements100_000, CorrectHashes.Measurements100_000);
+        // BenchmarkProcessor(processor, 1_000_000, FilePathConstants.Measurements1_000_000, CorrectHashes.Measurements1_000_000);
+        // BenchmarkProcessor(processor, 10_000_000, FilePathConstants.Measurements10_000_000, CorrectHashes.Measurements10_000_000);
+        BenchmarkProcessor(processor, 1_000_000_000, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
     }
 
     private static void BenchmarkProcessor(IDataStreamProcessor processor, long rowCount, string filePath, string correctHash)
@@ -30,22 +29,22 @@ public class Program
         TimeLogger.LogExecution($"Processing {rowCount:N0} rows using {processor.GetType().Name}", () =>
         {
             processedData = processor.ProcessData(filePath);
-        });
+        }, rowCount);
         IPresenter presenter = new PresenterV1();
         string result = presenter.BuildResultString(processedData);
         
-        // if (Hasher.Hash(result) == correctHash)
-        // {
-        //     Console.WriteLine("Correct!");
-        // }
-        // else
-        // {
-        //     Console.ForegroundColor = ConsoleColor.Red;
-        //     Console.WriteLine("Incorrect!");
-        //     Console.WriteLine(Hasher.Hash(result));
-        //     
-        //     // string debug = File.ReadAllText(@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-1_000_000_000.out").Trim();
-        // }
+        if (Hasher.Hash(result) == correctHash)
+        {
+            Console.WriteLine("Correct!");
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Incorrect!");
+            Console.WriteLine(Hasher.Hash(result));
+            
+            string debug = File.ReadAllText($@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-{rowCount.ToString("N0").Replace(".", "_")}.out").Trim();
+        }
     }
 
     private static void PrintHash(string path)
