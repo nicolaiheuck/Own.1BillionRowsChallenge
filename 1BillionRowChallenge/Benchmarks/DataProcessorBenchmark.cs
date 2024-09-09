@@ -1,9 +1,8 @@
 ﻿using System.Globalization;
-using _1BillionRowChallenge.Helpers;
 using _1BillionRowChallenge.Models;
 using BenchmarkDotNet.Attributes;
 
-namespace _1BillionRowChallenge;
+namespace _1BillionRowChallenge.Benchmarks;
 
 [MemoryDiagnoser]
 [BaselineColumn]
