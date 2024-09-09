@@ -21,7 +21,6 @@ namespace _1BillionRowChallenge.Processors;
 /// 4.2M rows a second (5.4 using AOT)
 /// </summary>
 //NH_TODO: For next versions
-//             Short as ids
 //             MemoryMappedFile.CreateFromFile
 //             MultiThreading
 public class DataStreamProcessorV4 : IDataStreamProcessorV4

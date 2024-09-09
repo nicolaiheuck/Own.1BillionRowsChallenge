@@ -8,5 +8,5 @@ public class AggregatedDataPointV4
 
     public decimal Sum;
 
-    public ushort AmountOfDataPoints;
+    public ulong AmountOfDataPoints;
 }
