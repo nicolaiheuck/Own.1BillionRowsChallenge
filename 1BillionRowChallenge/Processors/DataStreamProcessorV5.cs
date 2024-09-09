@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.IO.MemoryMappedFiles;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
 
@@ -21,17 +22,62 @@ namespace _1BillionRowChallenge.Processors;
 /// ____ rows a second (___ using AOT)
 /// </summary>
 //NH_TODO: For next versions
-//             Short as ids
-//             MemoryMappedFile.CreateFromFile
 //             MultiThreading
-public class DataStreamProcessorV5 : IDataStreamProcessorV4
+//             MemoryMappedFile.CreateFromFile
+public class DataStreamProcessorV5 : IDataStreamProcessorV5
 {
-    public List<ResultRowV4> ProcessData(string filePath)
+    private static int _linesProcessed = 0;
+    public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount)
+    {
+        FileInfo fileInfo = new(filePath);
+        long rowsToProcess = rowCount;
+        IEnumerable<string> lines = File.ReadLines(filePath);
+        const int amountOfTasksToStart = 2;
+        Dictionary<string, AggregatedDataPointV4> aggregation = [];
+        List<Task<Dictionary<string, AggregatedDataPointV4>>> tasks = [];
+
+        for (int i = 0; i < amountOfTasksToStart; i++)
+        {
+            long startAtLine = i * (rowsToProcess / amountOfTasksToStart);
+            long stopAtLine = (i + 1) * (rowsToProcess / amountOfTasksToStart);
+            Console.WriteLine($"Reading: {startAtLine} to {stopAtLine}");
+            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(lines, (int)startAtLine, (int)stopAtLine))));
+        }
+
+        await Task.WhenAll(tasks);
+        List<Dictionary<string, AggregatedDataPointV4>> results = tasks.Select(t => t.Result).ToList();
+        foreach (Dictionary<string, AggregatedDataPointV4> result in results)
+        {
+            foreach ((string? cityName, AggregatedDataPointV4? dataPoint) in result)
+            {
+                if (aggregation.ContainsKey(cityName))
+                {
+                    AggregatedDataPointV4? existingDataPoint = aggregation[cityName];
+                    existingDataPoint.Min = Math.Min(existingDataPoint.Min, dataPoint.Min);
+                    existingDataPoint.Max = Math.Max(existingDataPoint.Max, dataPoint.Max);
+                    existingDataPoint.Sum += dataPoint.Sum;
+                    existingDataPoint.AmountOfDataPoints += dataPoint.AmountOfDataPoints;
+                }
+                else
+                {
+                    aggregation[cityName] = dataPoint;
+                }
+            }
+        }
+
+        return aggregation.Select(keyPair => new ResultRowV4(keyPair.Key)
+        {
+            Min = keyPair.Value.Min,
+            Max = keyPair.Value.Max,
+            Mean = keyPair.Value.Sum / keyPair.Value.AmountOfDataPoints
+        }).ToList();
+    }
+
+    private static Dictionary<string, AggregatedDataPointV4> AggregateRows(IEnumerable<(string, decimal)> rows)
     {
         Dictionary<string, AggregatedDataPointV4> result = new();
-        int i = 0;
         
-        foreach ((string? cityName, decimal temperature) in ReadRowsFromFile(filePath))
+        foreach ((string? cityName, decimal temperature) in rows)
         {
             AggregatedDataPointV4 aggregatedDataPoint;
             if (result.TryGetValue(cityName, out AggregatedDataPointV4? value))
@@ -58,25 +104,20 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV4
             }
             aggregatedDataPoint.Sum += temperature;
             aggregatedDataPoint.AmountOfDataPoints++;
-            
-            i++;
-            if (i % 1_000_000 == 0)
+
+            Interlocked.Increment(ref _linesProcessed);
+            if (_linesProcessed % 1_000_000 == 0)
             {
-                Console.Write($"\rAggregated {i:N0} rows");
+                Console.Write($"\rAggregated {_linesProcessed:N0} rows");
             }
         }
-        
-        return result.Select(keyPair => new ResultRowV4(keyPair.Key)
-        {
-            Min = keyPair.Value.Min,
-            Max = keyPair.Value.Max,
-            Mean = keyPair.Value.Sum / keyPair.Value.AmountOfDataPoints
-        }).ToList();
+
+        return result;
     }
 
-    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath)
+    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(IEnumerable<string> lines, int skip, int take)
     {
-        foreach (string line in File.ReadLines(filePath))
+        foreach (string line in lines)
         {
             ReadOnlySpan<char> lineAsSpan = line.AsSpan();
             int indexOfSeparator = lineAsSpan.IndexOf(';');
