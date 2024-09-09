@@ -1,8 +1,8 @@
 ﻿namespace _1BillionRowChallenge.Models;
 
-public class ResultRowV5(short cityName)
+public class ResultRowV5(ushort cityName)
 {
-    public short CityName { get; set; } = cityName;
+    public ushort CityName { get; set; } = cityName;
 
     public decimal Min { get; set; }
 
