@@ -31,9 +31,7 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
     {
         FileInfo fileInfo = new(filePath);
         long rowsToProcess = rowCount;
-        IEnumerable<string> lines = File.ReadLines(filePath);
         const int amountOfTasksToStart = 2;
-        Dictionary<string, AggregatedDataPointV4> aggregation = [];
         List<Task<Dictionary<string, AggregatedDataPointV4>>> tasks = [];
 
         for (int i = 0; i < amountOfTasksToStart; i++)
@@ -41,11 +39,16 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
             long startAtLine = i * (rowsToProcess / amountOfTasksToStart);
             long stopAtLine = (i + 1) * (rowsToProcess / amountOfTasksToStart);
             Console.WriteLine($"Reading: {startAtLine} to {stopAtLine}");
-            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(lines, (int)startAtLine, (int)stopAtLine))));
+            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, (int)startAtLine, (int)stopAtLine))));
         }
 
-        await Task.WhenAll(tasks);
-        List<Dictionary<string, AggregatedDataPointV4>> results = tasks.Select(t => t.Result).ToList();
+        Dictionary<string, AggregatedDataPointV4>[] results = await Task.WhenAll(tasks);
+        return SecondLayerAggregation(results.ToList());
+    }
+    
+    private static List<ResultRowV4> SecondLayerAggregation(List<Dictionary<string, AggregatedDataPointV4>> results)
+    {
+        Dictionary<string, AggregatedDataPointV4> aggregation = [];
         foreach (Dictionary<string, AggregatedDataPointV4> result in results)
         {
             foreach ((string? cityName, AggregatedDataPointV4? dataPoint) in result)
@@ -115,9 +118,9 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
         return result;
     }
 
-    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(IEnumerable<string> lines, int skip, int take)
+    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath, int skip, int take)
     {
-        foreach (string line in lines)
+        foreach (string line in File.ReadLines(filePath).Skip(skip).Take(take))
         {
             ReadOnlySpan<char> lineAsSpan = line.AsSpan();
             int indexOfSeparator = lineAsSpan.IndexOf(';');
