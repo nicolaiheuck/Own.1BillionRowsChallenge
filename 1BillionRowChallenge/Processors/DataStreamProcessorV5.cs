@@ -38,7 +38,7 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
         ConcurrentLinesProcessed = new();
         FileInfo fileInfo = new(filePath);
         long rowsToProcess = rowCount;
-        const int amountOfTasksToStart = 2;
+        const int amountOfTasksToStart = 4;
         List<Task> tasks = [];
 
         for (int i = 0; i < amountOfTasksToStart; i++)
@@ -129,22 +129,14 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
 
     private static IEnumerable<ValueTuple<string, int>> ReadRowsFromFile(string filePath, int start, int end)
     {
-        // int threadId = end / 25000;
-        // Console.WriteLine($"[T{threadId}]: Reading from {start:N0} to {end:N0}");
-        // Console.WriteLine($"[T{threadId}]: First line ({start}): {File.ReadLines(filePath).Skip(start).Take(1).First()}");
-        // Console.WriteLine($"[T{threadId}]: Last line {end}: {File.ReadLines(filePath).Skip(start).Take(end - start).Last()}");
-        // int i = 0;
         foreach (string line in File.ReadLines(filePath).Skip(start).Take(end - start))
         {
-            // i++;
-            // ConcurrentLinesProcessed.Add($"{threadId}:{i}");
             ReadOnlySpan<char> lineAsSpan = line.AsSpan();
             int indexOfSeparator = lineAsSpan.IndexOf(';');
 
             ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
             ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
-            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
-            temperature *= 100;
+            decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture) * 100;
             yield return (cityNameSpan.ToString(), (int)temperature);
         }
     }

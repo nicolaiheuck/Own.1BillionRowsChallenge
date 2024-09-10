@@ -19,7 +19,7 @@ public static class TimeLogger
             Console.WriteLine($"Execution time for \"{description}\" in {watch.ElapsedMilliseconds}ms ({rowCount/watch.Elapsed.TotalSeconds:N0} rows/sec)");
         }
     }
-    public static async Task LogExecutionAsync(string description, Func<Task> action, long? rowCount = null)
+    public static async Task<long> LogExecutionAsync(string description, Func<Task> action, long? rowCount = null)
     {
         Stopwatch watch = new();
 
@@ -33,5 +33,6 @@ public static class TimeLogger
             watch.Stop();
             Console.WriteLine($"Execution time for \"{description}\" in {watch.ElapsedMilliseconds}ms ({rowCount/watch.Elapsed.TotalSeconds:N0} rows/sec)");
         }
+        return watch.ElapsedMilliseconds;
     }
 }
