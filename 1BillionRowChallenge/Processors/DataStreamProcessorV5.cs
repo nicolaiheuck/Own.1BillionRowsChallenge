@@ -93,11 +93,11 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
             Interlocked.Add(ref aggregatedDataPoint.Sum, temperature);
             Interlocked.Increment(ref aggregatedDataPoint.AmountOfDataPoints);
 
-            // Interlocked.Increment(ref _linesProcessed);
-            // if (_linesProcessed % 1_000_000 == 0)
-            // {
-            //     Console.Write($"\rAggregated {_linesProcessed:N0} rows");
-            // }
+            Interlocked.Increment(ref _linesProcessed);
+            if (_linesProcessed % 1_000_000 == 0)
+            {
+                Console.Write($"\rAggregated {_linesProcessed:N0} rows");
+            }
         }
     }
 
