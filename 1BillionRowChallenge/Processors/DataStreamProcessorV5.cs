@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO.MemoryMappedFiles;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
@@ -12,14 +13,14 @@ namespace _1BillionRowChallenge.Processors;
 /// Benchmarks:
 /// | File Size     | Execution Time | Rows per Second                                   |
 /// |---------------|----------------|---------------------------------------------------|
-/// | 10            |                |                                                   |
-/// | 10,000        |                |                                                   |
+/// | 10            | 23 ms          |                                                   |
+/// | 10,000        | 17 ms          |                                                   |
 /// | 100,000       |                |                                                   |
 /// | 1,000,000     |                |                                                   |
 /// | 10,000,000    |                |                                                   |
-/// | 1,000,000,000 |                |                                                   |
+/// | 1,000,000,000 | 157615 ms      |  6.544.561 (2.6 minutes or 2.1 using AOT)         |
 /// Only ___ MB of memory
-/// ____ rows a second (___ using AOT)
+/// 6.3M rows a second (7.8M using AOT)
 /// </summary>
 //NH_TODO: For next versions
 //             MultiThreading
@@ -27,63 +28,66 @@ namespace _1BillionRowChallenge.Processors;
 public class DataStreamProcessorV5 : IDataStreamProcessorV5
 {
     private static int _linesProcessed = 0;
+    public static ConcurrentBag<string> ConcurrentLinesProcessed = new();
+    private static ConcurrentDictionary<string, ConcurrentAggregatedDataPointV5> _result = new();
+    private static object lockObject = new object();
     public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount)
     {
+        _linesProcessed = 0;
+        _result = new();
+        ConcurrentLinesProcessed = new();
         FileInfo fileInfo = new(filePath);
         long rowsToProcess = rowCount;
         const int amountOfTasksToStart = 2;
-        List<Task<Dictionary<string, AggregatedDataPointV4>>> tasks = [];
+        List<Task> tasks = [];
 
         for (int i = 0; i < amountOfTasksToStart; i++)
         {
-            long startAtLine = i * (rowsToProcess / amountOfTasksToStart);
-            long stopAtLine = (i + 1) * (rowsToProcess / amountOfTasksToStart);
-            Console.WriteLine($"Reading: {startAtLine} to {stopAtLine}");
-            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, (int)startAtLine, (int)stopAtLine))));
+            int startAtLine = (int)(i * (rowsToProcess / amountOfTasksToStart));
+            int stopAtLine = (int)((i + 1) * (rowsToProcess / amountOfTasksToStart));
+            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, startAtLine, stopAtLine))));
         }
 
-        Dictionary<string, AggregatedDataPointV4>[] results = await Task.WhenAll(tasks);
-        return SecondLayerAggregation(results.ToList());
+        await Task.WhenAll(tasks);
+        return SecondLayerAggregation();
     }
     
-    private static List<ResultRowV4> SecondLayerAggregation(List<Dictionary<string, AggregatedDataPointV4>> results)
+    private static List<ResultRowV4> SecondLayerAggregation()
     {
-        Dictionary<string, AggregatedDataPointV4> aggregation = [];
-        foreach (Dictionary<string, AggregatedDataPointV4> result in results)
-        {
-            foreach ((string? cityName, AggregatedDataPointV4? dataPoint) in result)
-            {
-                if (aggregation.ContainsKey(cityName))
-                {
-                    AggregatedDataPointV4? existingDataPoint = aggregation[cityName];
-                    existingDataPoint.Min = Math.Min(existingDataPoint.Min, dataPoint.Min);
-                    existingDataPoint.Max = Math.Max(existingDataPoint.Max, dataPoint.Max);
-                    existingDataPoint.Sum += dataPoint.Sum;
-                    existingDataPoint.AmountOfDataPoints += dataPoint.AmountOfDataPoints;
-                }
-                else
-                {
-                    aggregation[cityName] = dataPoint;
-                }
-            }
-        }
+        // Dictionary<string, AggregatedDataPointV4> aggregation = [];
+        // foreach (Dictionary<string, AggregatedDataPointV4> result in results)
+        // {
+        //     foreach ((string? cityName, AggregatedDataPointV4? dataPoint) in result)
+        //     {
+        //         if (aggregation.ContainsKey(cityName))
+        //         {
+        //             AggregatedDataPointV4? existingDataPoint = aggregation[cityName];
+        //             existingDataPoint.Min = Math.Min(existingDataPoint.Min, dataPoint.Min);
+        //             existingDataPoint.Max = Math.Max(existingDataPoint.Max, dataPoint.Max);
+        //             existingDataPoint.Sum += dataPoint.Sum;
+        //             existingDataPoint.AmountOfDataPoints += dataPoint.AmountOfDataPoints;
+        //         }
+        //         else
+        //         {
+        //             aggregation[cityName] = dataPoint;
+        //         }
+        //     }
+        // }
 
-        return aggregation.Select(keyPair => new ResultRowV4(keyPair.Key)
+        return _result.Select(keyPair => new ResultRowV4(keyPair.Key)
         {
-            Min = keyPair.Value.Min,
-            Max = keyPair.Value.Max,
-            Mean = keyPair.Value.Sum / keyPair.Value.AmountOfDataPoints
+            Min = keyPair.Value.Min / 100,
+            Max = keyPair.Value.Max / 100,
+            Mean = ((decimal)keyPair.Value.Sum / 100) / keyPair.Value.AmountOfDataPoints
         }).ToList();
     }
 
-    private static Dictionary<string, AggregatedDataPointV4> AggregateRows(IEnumerable<(string, decimal)> rows)
+    private static void AggregateRows(IEnumerable<(string, int)> rows)
     {
-        Dictionary<string, AggregatedDataPointV4> result = new();
-        
-        foreach ((string? cityName, decimal temperature) in rows)
+        foreach ((string? cityName, int temperature) in rows)
         {
-            AggregatedDataPointV4 aggregatedDataPoint;
-            if (result.TryGetValue(cityName, out AggregatedDataPointV4? value))
+            ConcurrentAggregatedDataPointV5 aggregatedDataPoint;
+            if (_result.TryGetValue(cityName, out ConcurrentAggregatedDataPointV5? value))
             {
                 aggregatedDataPoint = value;
             }
@@ -94,7 +98,7 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
                     Min = int.MaxValue,
                     Max = int.MinValue,
                 };
-                result[cityName] = aggregatedDataPoint;
+                _result[cityName] = aggregatedDataPoint;
                 
             }
             if (temperature < aggregatedDataPoint.Min)
@@ -105,30 +109,53 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
             {
                 aggregatedDataPoint.Max = temperature;
             }
-            aggregatedDataPoint.Sum += temperature;
-            aggregatedDataPoint.AmountOfDataPoints++;
 
-            Interlocked.Increment(ref _linesProcessed);
-            if (_linesProcessed % 1_000_000 == 0)
-            {
-                Console.Write($"\rAggregated {_linesProcessed:N0} rows");
-            }
+            
+            Interlocked.Add(ref aggregatedDataPoint.Sum, temperature);
+            Interlocked.Increment(ref aggregatedDataPoint.AmountOfDataPoints);
+            // lock (lockObject)
+            // {
+            //     aggregatedDataPoint.Sum += temperature;
+            //     aggregatedDataPoint.AmountOfDataPoints++;
+            // }
+
+            // Interlocked.Increment(ref _linesProcessed);
+            // if (_linesProcessed % 1_000_000 == 0)
+            // {
+            //     Console.Write($"\rAggregated {_linesProcessed:N0} rows");
+            // }
         }
-
-        return result;
     }
 
-    private static IEnumerable<ValueTuple<string, decimal>> ReadRowsFromFile(string filePath, int skip, int take)
+    private static IEnumerable<ValueTuple<string, int>> ReadRowsFromFile(string filePath, int start, int end)
     {
-        foreach (string line in File.ReadLines(filePath).Skip(skip).Take(take))
+        // int threadId = end / 25000;
+        // Console.WriteLine($"[T{threadId}]: Reading from {start:N0} to {end:N0}");
+        // Console.WriteLine($"[T{threadId}]: First line ({start}): {File.ReadLines(filePath).Skip(start).Take(1).First()}");
+        // Console.WriteLine($"[T{threadId}]: Last line {end}: {File.ReadLines(filePath).Skip(start).Take(end - start).Last()}");
+        // int i = 0;
+        foreach (string line in File.ReadLines(filePath).Skip(start).Take(end - start))
         {
+            // i++;
+            // ConcurrentLinesProcessed.Add($"{threadId}:{i}");
             ReadOnlySpan<char> lineAsSpan = line.AsSpan();
             int indexOfSeparator = lineAsSpan.IndexOf(';');
 
             ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
             ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
             decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture);
-            yield return (cityNameSpan.ToString(), temperature);
+            temperature *= 100;
+            yield return (cityNameSpan.ToString(), (int)temperature);
         }
     }
+}
+public class ConcurrentAggregatedDataPointV5
+{
+    public decimal Min;
+
+    public decimal Max;
+
+    public int Sum;
+
+    public ulong AmountOfDataPoints;
 }

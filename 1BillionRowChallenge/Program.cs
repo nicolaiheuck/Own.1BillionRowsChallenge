@@ -15,9 +15,9 @@ public class Program
         // return;
 
         IDataStreamProcessorV5 processor = new DataStreamProcessorV5();
-        // CalculateProcessingRate(processor);
-        await TestAllBelow1BAsync(processor);
-        // Test1B(processor);
+        await CalculateProcessingRate(processor);
+        // await TestAllBelow1BAsync(processor);
+        // await Test1B(processor);
     }
 
     private static async Task Test1B(IDataStreamProcessorV5 processor)
@@ -38,9 +38,9 @@ public class Program
         // await BenchmarkProcessorAsync(processor, 10, FilePathConstants.Measurements10, CorrectHashes.Measurements10);
         // await BenchmarkProcessorAsync(processor, 20, FilePathConstants.Measurements20, CorrectHashes.Measurements20);
         // await BenchmarkProcessorAsync(processor, 10_000, FilePathConstants.Measurements10_000, CorrectHashes.Measurements10_000);
-        // await BenchmarkProcessorAsync(processor, 100_000, FilePathConstants.Measurements100_000, CorrectHashes.Measurements100_000);
+        await BenchmarkProcessorAsync(processor, 100_000, FilePathConstants.Measurements100_000, CorrectHashes.Measurements100_000);
         // await BenchmarkProcessorAsync(processor, 1_000_000, FilePathConstants.Measurements1_000_000, CorrectHashes.Measurements1_000_000);
-        await BenchmarkProcessorAsync(processor, 10_000_000, FilePathConstants.Measurements10_000_000, CorrectHashes.Measurements10_000_000);
+        // await BenchmarkProcessorAsync(processor, 10_000_000, FilePathConstants.Measurements10_000_000, CorrectHashes.Measurements10_000_000);
     }
 
     private static async Task BenchmarkProcessorAsync(IDataStreamProcessorV5 processor, long rowCount, string filePath, string correctHash)
@@ -62,10 +62,32 @@ public class Program
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("Incorrect!");
             Console.WriteLine(Hasher.Hash(result));
+            Console.WriteLine($"Entires in ConcurrentLinesProcessed: {DataStreamProcessorV5.ConcurrentLinesProcessed.Count}");
+            bool foundMismatch = false;
+            foreach (IGrouping<string,string> group in DataStreamProcessorV5.ConcurrentLinesProcessed.Reverse().GroupBy(l => l.Split(":")[0]))
+            {
+                int i = 0;
+                foreach (string line in group.ToList())
+                {
+                    i++;
+                    string value = line.Split(":")[1];
+                    if (value != i.ToString())
+                    {
+                        Console.WriteLine("Found a mismatch!");
+                        foundMismatch = true;
+                        break;
+                    }
+                }
+            }
+            if (!foundMismatch)
+            {
+                Console.WriteLine("No mismatches found!");
+            }
+            Console.ResetColor();
             
             string debug = File.ReadAllText($@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-{rowCount.ToString("N0").Replace(".", "_")}.out").Trim();
-            Console.WriteLine($"You should have:\n{debug}");
-            Console.WriteLine($"You have:\n{result}");
+            // Console.WriteLine($"You should have:\n{debug}");
+            // Console.WriteLine($"You have:\n{result}");
         }
     }
 
