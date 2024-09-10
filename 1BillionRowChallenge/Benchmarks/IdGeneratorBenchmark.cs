@@ -1,5 +1,4 @@
-﻿using System.Text;
-using _1BillionRowChallenge.Helpers;
+﻿using _1BillionRowChallenge.Helpers;
 using BenchmarkDotNet.Attributes;
 
 namespace _1BillionRowChallenge.Benchmarks;

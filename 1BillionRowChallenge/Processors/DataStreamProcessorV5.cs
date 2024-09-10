@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Globalization;
-using System.IO.MemoryMappedFiles;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
 
@@ -54,26 +53,6 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
     
     private static List<ResultRowV4> SecondLayerAggregation()
     {
-        // Dictionary<string, AggregatedDataPointV4> aggregation = [];
-        // foreach (Dictionary<string, AggregatedDataPointV4> result in results)
-        // {
-        //     foreach ((string? cityName, AggregatedDataPointV4? dataPoint) in result)
-        //     {
-        //         if (aggregation.ContainsKey(cityName))
-        //         {
-        //             AggregatedDataPointV4? existingDataPoint = aggregation[cityName];
-        //             existingDataPoint.Min = Math.Min(existingDataPoint.Min, dataPoint.Min);
-        //             existingDataPoint.Max = Math.Max(existingDataPoint.Max, dataPoint.Max);
-        //             existingDataPoint.Sum += dataPoint.Sum;
-        //             existingDataPoint.AmountOfDataPoints += dataPoint.AmountOfDataPoints;
-        //         }
-        //         else
-        //         {
-        //             aggregation[cityName] = dataPoint;
-        //         }
-        //     }
-        // }
-
         return _result.Select(keyPair => new ResultRowV4(keyPair.Key)
         {
             Min = keyPair.Value.Min / 100,
@@ -113,11 +92,6 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
             
             Interlocked.Add(ref aggregatedDataPoint.Sum, temperature);
             Interlocked.Increment(ref aggregatedDataPoint.AmountOfDataPoints);
-            // lock (lockObject)
-            // {
-            //     aggregatedDataPoint.Sum += temperature;
-            //     aggregatedDataPoint.AmountOfDataPoints++;
-            // }
 
             // Interlocked.Increment(ref _linesProcessed);
             // if (_linesProcessed % 1_000_000 == 0)
