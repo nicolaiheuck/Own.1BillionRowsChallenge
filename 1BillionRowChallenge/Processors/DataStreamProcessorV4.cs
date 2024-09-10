@@ -16,13 +16,10 @@ namespace _1BillionRowChallenge.Processors;
 /// | 100,000       | 35 ms          | 2,813,335                                         |
 /// | 1,000,000     | 365 ms         | 2,736,968                                         |
 /// | 10,000,000    | 2,470 ms       | 4,047,937                                         |
-/// | 1,000,000,000 | 243749ms       | 4.102.568 (4.0 minutes) (3.1 minutes using AOT)   | //NH_TODO: Was incorrect :(
+/// | 1,000,000,000 | 243749ms       | 4.102.568 (4.0 minutes) (3.1 minutes using AOT)   |
 /// Only 20 MB of memory
-/// 4.2M rows a second (5.4 using AOT)
+/// 4.2M rows a second (5.4M using AOT)
 /// </summary>
-//NH_TODO: For next versions
-//             MemoryMappedFile.CreateFromFile
-//             MultiThreading
 public class DataStreamProcessorV4 : IDataStreamProcessorV4
 {
     public List<ResultRowV4> ProcessData(string filePath)

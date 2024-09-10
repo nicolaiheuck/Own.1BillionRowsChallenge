@@ -4,5 +4,5 @@ namespace _1BillionRowChallenge.Interfaces;
 
 public interface IDataStreamProcessorV5
 {
-    Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount);
+    Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount, int? amountOfTasksInTotalOverwrite = null);
 }
