@@ -6,25 +6,24 @@ using _1BillionRowChallenge.Models;
 namespace _1BillionRowChallenge.Processors;
 
 /// <summary>
-/// Changes form V4:
-///     Multi threading
+/// Changes form V5:
 /// 
 /// Benchmarks:
 /// | File Size     | Execution Time | Rows per Second                                   |
 /// |---------------|----------------|---------------------------------------------------|
-/// | 10            | 14 ms          |                                                   |
-/// | 10,000        | 6 ms           |                                                   |
-/// | 100,000       | 19 ms          |                                                   |
-/// | 1,000,000     | 144 ms         |                                                   |
-/// | 10,000,000    | 1374 ms        |                                                   |
-/// | 1,000,000,000 | 126484 ms      |  7.906.084 (2.10 minutes or 1.67 using AOT)       |
-/// Only 15 MB of memory
-/// 7.9M rows a second (9.9M using AOT)
+/// | 10            | __ ms          |                                                   |
+/// | 10,000        | _ ms           |                                                   |
+/// | 100,000       | __ ms          |                                                   |
+/// | 1,000,000     | ___ ms         |                                                   |
+/// | 10,000,000    | ____ ms        |                                                   |
+/// | 1,000,000,000 | ______ ms      |  _________ (____ minutes or ____ using AOT)       |
+/// Only __ MB of memory
+/// ___M rows a second (___M using AOT)
 /// </summary>
 //NH_TODO: For next versions
 //             Split processing into a first and second pass
 //             MemoryMappedFile.CreateFromFile
-public class DataStreamProcessorV5 : IDataStreamProcessorV5
+public class DataStreamProcessorV6 : IDataStreamProcessorV5
 {
     private static int _linesProcessed;
     private static ConcurrentDictionary<string, AggregatedDataPointV5> _result = new();
@@ -33,24 +32,47 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
     {
         _linesProcessed = 0;
         _result = new();
-        const int amountOfTasksInTotalConst = 10;
-        const int amountOfTasksToRunInParallel = 10;
-        _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
-        int amountOfTasksInTotal = amountOfTasksInTotalOverwrite ?? amountOfTasksInTotalConst;
-        List<Task> tasks = [];
+        const int blockCount = 10;
 
-        int taskId = 0;
-        for (int i = 0; i < amountOfTasksInTotal; i++)
-        {
-            int startAtLine = (int)(i * (rowCount / amountOfTasksInTotal));
-            int stopAtLine = (int)((i + 1) * (rowCount / amountOfTasksInTotal));
-            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, startAtLine, stopAtLine), taskId++)));
-        }
-
-        await Task.WhenAll(tasks);
-        return SecondLayerAggregation();
+        SplitFileIntoBlocks(filePath, blockCount);
+        
+        // const int amountOfTasksInTotalConst = 10;
+        // const int amountOfTasksToRunInParallel = 10;
+        // _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
+        // int amountOfTasksInTotal = amountOfTasksInTotalOverwrite ?? amountOfTasksInTotalConst;
+        // List<Task> tasks = [];
+        //
+        // int taskId = 0;
+        // for (int i = 0; i < amountOfTasksInTotal; i++)
+        // {
+        //     int startAtLine = (int)(i * (rowCount / amountOfTasksInTotal));
+        //     int stopAtLine = (int)((i + 1) * (rowCount / amountOfTasksInTotal));
+        //     tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, startAtLine, stopAtLine), taskId++)));
+        // }
+        //
+        // await Task.WhenAll(tasks);
+        // return SecondLayerAggregation();
+        return [];
     }
-    
+
+    private void SplitFileIntoBlocks(string filePath, int blockCount)
+    {
+        FileInfo fileInfo = new FileInfo(filePath);
+        using FileStream fileStream = File.OpenRead(filePath);
+        using StreamReader reader = new(fileStream);
+        List<Block> blocks = new();
+        
+        for (int i = 0; i < blockCount; i++)
+        {
+            long blockSize = fileInfo.Length / blockCount;
+            long start = i * blockSize;
+            long end = (i + 1) * blockSize;
+            fileStream.Position = end;
+            reader.ReadLine();
+            end = fileStream.Position;
+        }
+    }
+
     private static List<ResultRowV4> SecondLayerAggregation()
     {
         return _result.Select(keyPair => new ResultRowV4(keyPair.Key)
@@ -126,4 +148,10 @@ public class DataStreamProcessorV5 : IDataStreamProcessorV5
             yield return (cityNameSpan.ToString(), (int)temperature);
         }
     }
+}
+public class Block
+{
+    public long Start { get; set; }
+
+    public long End { get; set; }
 }

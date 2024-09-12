@@ -1,7 +1,6 @@
 ﻿using _1BillionRowChallenge.Helpers;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
-using _1BillionRowChallenge.Presenters;
 using _1BillionRowChallenge.Processors;
 
 namespace _1BillionRowChallenge;
@@ -13,7 +12,7 @@ public class Program
         // var summary = BenchmarkDotNet.Running.BenchmarkRunner.Run<IdGeneratorBenchmark>();
         // return;
 
-        IDataStreamProcessorV5 processor = new DataStreamProcessorV5();
+        IDataStreamProcessorV5 processor = new DataStreamProcessorV6();
         // await CalculateProcessingRate(processor);
         // await BenchmarkRowsPerTask(processor);
         // await TestAllBelow1BAsync(processor);
