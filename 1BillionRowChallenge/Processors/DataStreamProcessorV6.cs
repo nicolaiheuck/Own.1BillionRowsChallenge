@@ -70,15 +70,15 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
                 }
                 catch (Exception ex)
                 {
-                    ConcurrentConsoleHelperDecorator.WriteAtPosition(0, 10, $"Error while running task {block.Id}:");
-                    ConcurrentConsoleHelperDecorator.WriteAtPosition(0, 11, ex.Message);
+                    ConsoleHelper.WriteAtPosition(0, 10, $"Error while running task {block.Id}:");
+                    ConsoleHelper.WriteAtPosition(0, 11, ex.Message);
                     throw;
                 }
             }));
         }
         await Task.WhenAll(tasks);
         Console.Clear();
-        ConcurrentConsoleHelperDecorator.WriteAtPosition(0, 10, "First pass done. Press a key to continue");
+        ConsoleHelper.WriteAtPosition(0, 10, "First pass done. Press a key to continue");
         Console.ReadKey();
         return [];
 
@@ -224,7 +224,7 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
 
             if (readByte == -1)
             {
-                ConcurrentConsoleHelperDecorator.WriteLine("End of file reached while searching for seperator. This should not happen.");
+                ConsoleHelper.WriteLine("End of file reached while searching for seperator. This should not happen.");
                 break;
             }
         } while (readByte != seperator);

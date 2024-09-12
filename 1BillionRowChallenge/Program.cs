@@ -30,7 +30,7 @@ public class Program
             long executionTime = await BenchmarkProcessorAsync(processor, rowCount, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000, value);
             decimal executionTimeInSeconds = executionTime / 1000m;
             decimal rowsPerSecond = Math.Round(rowCount / executionTimeInSeconds / 1_000_000, 2);
-            ConcurrentConsoleHelperDecorator.WriteLine($"\r{value:N0} threads = {rowsPerSecond:N2}M                         ");
+            ConsoleHelper.WriteLine($"\r{value:N0} threads = {rowsPerSecond:N2}M                         ");
         }
     }
 
@@ -49,7 +49,7 @@ public class Program
         {
             ThreadProgressState state = DataStreamProcessorV6.CurrentThreadState[threadId];
             decimal percent = state.LinesProcessedSoFar / (decimal)state.LinesToProcess;
-            ConcurrentConsoleHelperDecorator.ColoredWriteLine($"[Thread {threadId}] {percent:P0}      (lines: {state.LinesProcessedSoFar:N0}/{state.LinesToProcess:N0}, " +
+            ConsoleHelper.ColoredWriteLine($"[Thread {threadId}] {percent:P0}      (lines: {state.LinesProcessedSoFar:N0}/{state.LinesToProcess:N0}, " +
                                                                                                      $"bytes: {state.BytesReadSoFar:N0}/{state.BytesToRead:N0}, " +
                                                                                                      $"rows per sec: {state.LinesProcessedSoFar/state.Stopwatch.Elapsed.TotalSeconds:N0})", state.IsFinished ? ConsoleColor.Green : ConsoleColor.Yellow, 0, i++);
         }
@@ -67,7 +67,7 @@ public class Program
             timings.Add(rowsPerSecond);
         }
 
-        ConcurrentConsoleHelperDecorator.WriteLine($"\nExecution stats: Min: {timings.Min():N0}ms, Max: {timings.Max():N0}ms, Avg: {timings.Average():N0}ms");
+        ConsoleHelper.WriteLine($"\nExecution stats: Min: {timings.Min():N0}ms, Max: {timings.Max():N0}ms, Avg: {timings.Average():N0}ms");
     }
 
     private static async Task TestAllBelow1BAsync(IDataStreamProcessorV5 processor)
@@ -91,13 +91,13 @@ public class Program
         
         if (Hasher.Hash(result) == correctHash)
         {
-            ConcurrentConsoleHelperDecorator.WriteLine("Correct!");
+            ConsoleHelper.WriteLine("Correct!");
         }
         else
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            ConcurrentConsoleHelperDecorator.WriteLine("Incorrect!");
-            ConcurrentConsoleHelperDecorator.WriteLine(Hasher.Hash(result));
+            ConsoleHelper.WriteLine("Incorrect!");
+            ConsoleHelper.WriteLine(Hasher.Hash(result));
             Console.ResetColor();
             
             string debug = File.ReadAllText($@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-{rowCount.ToString("N0").Replace(".", "_")}.out").Trim();
