@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
@@ -32,10 +33,25 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
     {
         _linesProcessed = 0;
         _result = new();
-        const int blockCount = 10;
 
-        SplitFileIntoBlocks(filePath, blockCount);
+        List<Block> blocks = SplitFileIntoBlocks(filePath, 10);
+        Console.WriteLine("Planning to read:");
+        foreach (Block block in blocks.Take(9))
+        {
+            Console.WriteLine($"\tFrom {block.Start} to {block.End}");
+            BoundaryTest(filePath, block.Start, block.End);
+        }
+
+        Block lastBlock = blocks.Last();
+        Console.WriteLine($"Second pass planning to read (from {lastBlock.Start} to {lastBlock.End}):");
         
+        blocks = SplitFileIntoBlocks(filePath, 10, lastBlock.Start);
+        foreach (Block block in blocks)
+        {
+            Console.WriteLine($"\tFrom {block.Start} to {block.End}");
+            BoundaryTest(filePath, block.Start, block.End);
+        }
+
         // const int amountOfTasksInTotalConst = 10;
         // const int amountOfTasksToRunInParallel = 10;
         // _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
@@ -55,22 +71,73 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
         return [];
     }
 
-    private void SplitFileIntoBlocks(string filePath, int blockCount)
+    private void BoundaryTest(string filePath, long startOfBoundary, long endOfBoundary)
     {
-        FileInfo fileInfo = new FileInfo(filePath);
+        using FileStream fileStream = File.OpenRead(filePath);
+        const int sectionWidth = 3;
+        
+        fileStream.Position = startOfBoundary;
+        char firstByte = (char)fileStream.ReadByte();
+        
+        fileStream.Position = endOfBoundary;
+        char lastByte = (char)fileStream.ReadByte();
+        
+        fileStream.Position = endOfBoundary -1;
+        char secondLastByte = (char)fileStream.ReadByte();
+        
+        Console.WriteLine($"\tFrom {firstByte} to {lastByte}");
+        if (secondLastByte != '\n') {
+            Console.WriteLine($"Second last byte is not a newline (from {startOfBoundary} to {endOfBoundary})");
+        }
+    }
+
+    private string ReadBytes(FileStream fileStream, int bytesToRead)
+    {
+        string result = "";
+        for (int i = 0; i < bytesToRead; i++)
+        {
+            char readByte = (char)fileStream.ReadByte();
+            result += readByte;
+        }
+
+        return result;
+    }
+
+    private static List<Block> SplitFileIntoBlocks(string filePath, int blockCount, long offset = 0)
+    {
+        FileInfo fileInfo = new(filePath);
         using FileStream fileStream = File.OpenRead(filePath);
         using StreamReader reader = new(fileStream);
-        List<Block> blocks = new();
+        List<Block> blocks = [];
         
+        long blockSize = (fileInfo.Length - offset) / blockCount;
+        const char seperator = '\n';
         for (int i = 0; i < blockCount; i++)
         {
-            long blockSize = fileInfo.Length / blockCount;
-            long start = i * blockSize;
-            long end = (i + 1) * blockSize;
+            long start = i * blockSize + offset;
+            Block? lastBlock = blocks.LastOrDefault();
+
+            if (lastBlock != null && lastBlock.End > start)
+            {
+                start = lastBlock.End + 1;
+            }
+            long end = (i + 1) * blockSize + offset;
             fileStream.Position = end;
-            reader.ReadLine();
+            ReadToNextSeperator(seperator, fileStream);
             end = fileStream.Position;
+            blocks.Add(new() { Start = start, End = end });
         }
+        return blocks;
+    }
+
+    private static void ReadToNextSeperator(char seperator, FileStream stream)
+    {
+        int readByte;
+
+        do
+        {
+            readByte = stream.ReadByte();
+        } while (readByte != seperator);
     }
 
     private static List<ResultRowV4> SecondLayerAggregation()
