@@ -18,9 +18,9 @@ namespace _1BillionRowChallenge.Processors;
 /// | 100,000       | __ ms          |                                                   |
 /// | 1,000,000     | ___ ms         |                                                   |
 /// | 10,000,000    | ____ ms        |                                                   |
-/// | 1,000,000,000 | ______ ms      |  _________ (____ minutes or ____ using AOT)       |
-/// Only __ MB of memory
-/// ___M rows a second (___M using AOT)
+/// | 1,000,000,000 | ______ ms      |  _________ (62s or 56s using AOT)                 |
+/// Only 20 MB of memory
+/// 16.2M rows a second (17.9M using AOT)
 /// </summary>
 //NH_TODO: For next versions
 //             Split processing into a first and second pass
@@ -35,14 +35,13 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
     
     public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount, int? amountOfTasksInTotalOverwrite = null)
     {
-        const int amountOfTasksToRunInParallel = 1;
+        const int amountOfTasksToRunInParallel = 15; //NH_TODO: Experiment with getting the best number of threads
         _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
         _linesProcessed = 0;
         _result = new();
         CurrentThreadState = new();
 
-        TaskFactory taskFactory = new(TaskCreationOptions.RunContinuationsAsynchronously, TaskContinuationOptions.ExecuteSynchronously);
-        _blocks = FileSplitter.SplitFileIntoBlocks(filePath, 10);
+        _blocks = FileSplitter.SplitFileIntoBlocks(filePath, amountOfTasksToRunInParallel);
         using MemoryMappedFile memoryMappedFile = MemoryMappedFile.CreateFromFile(filePath);
         List<Task> tasks = [];
         foreach (Block block in _blocks)
@@ -63,13 +62,8 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
                     throw;
                 }
             }));
-            // BoundaryTester.BoundaryTest(filePath, block);
-            
         }
         await Task.WhenAll(tasks);
-        Console.Clear();
-        ConsoleHelper.WriteAtPosition(0, 10, "First pass done. Press a key to continue");
-        Console.ReadKey();
 
         // Block lastBlock = blocks.Last();
         //
