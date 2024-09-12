@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
 
@@ -24,57 +25,53 @@ namespace _1BillionRowChallenge.Processors;
 //NH_TODO: For next versions
 //             Split processing into a first and second pass
 //             MemoryMappedFile.CreateFromFile
+public class ThreadProgressState
+{
+    public long LinesProcessedSoFar { get; set; }
+    public long LinesToProcess { get; set; }
+}
 public class DataStreamProcessorV6 : IDataStreamProcessorV5
 {
     private static int _linesProcessed;
     private static ConcurrentDictionary<string, AggregatedDataPointV5> _result = new();
-    private static SemaphoreSlim _semaphore;
-    public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount, int? amountOfTasksInTotalOverwrite = null)
+    // public readonly static ConcurrentDictionary<int, ThreadProgressState> CurrentThreadState = new();
+    private static SemaphoreSlim _semaphore = null!;
+    public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCountOld, int? amountOfTasksInTotalOverwrite = null)
     {
+        const int amountOfTasksToRunInParallel = 1;
+        _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
         _linesProcessed = 0;
         _result = new();
 
         List<Block> blocks = SplitFileIntoBlocks(filePath, 10);
-        Console.WriteLine("Planning to read:");
-        foreach (Block block in blocks.Take(9))
+        List<Task> tasks = [];
+        int taskId = 0;
+        foreach (Block block in blocks.Take(1))
         {
-            Console.WriteLine($"\tFrom {block.Start} to {block.End}");
-            BoundaryTest(filePath, block.Start, block.End);
+            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, block.Start, block.End), taskId++, 100_000_000)));
         }
+        await Task.WhenAll(tasks);
+        return [];
 
         Block lastBlock = blocks.Last();
-        Console.WriteLine($"Second pass planning to read (from {lastBlock.Start} to {lastBlock.End}):");
-        
+
+        Console.Clear();
+        Console.WriteLine("Press a key to start the second pass");
+        Console.ReadKey(true);
         blocks = SplitFileIntoBlocks(filePath, 10, lastBlock.Start);
         foreach (Block block in blocks)
         {
-            Console.WriteLine($"\tFrom {block.Start} to {block.End}");
-            BoundaryTest(filePath, block.Start, block.End);
+            long rowCount = block.End - block.Start;
+            tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, block.Start, block.End), taskId++, 10_000_000)));
         }
-
-        // const int amountOfTasksInTotalConst = 10;
-        // const int amountOfTasksToRunInParallel = 10;
-        // _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
-        // int amountOfTasksInTotal = amountOfTasksInTotalOverwrite ?? amountOfTasksInTotalConst;
-        // List<Task> tasks = [];
-        //
-        // int taskId = 0;
-        // for (int i = 0; i < amountOfTasksInTotal; i++)
-        // {
-        //     int startAtLine = (int)(i * (rowCount / amountOfTasksInTotal));
-        //     int stopAtLine = (int)((i + 1) * (rowCount / amountOfTasksInTotal));
-        //     tasks.Add(Task.Run(() => AggregateRows(ReadRowsFromFile(filePath, startAtLine, stopAtLine), taskId++)));
-        // }
-        //
-        // await Task.WhenAll(tasks);
-        // return SecondLayerAggregation();
-        return [];
+        await Task.WhenAll(tasks);
+        
+        return SecondLayerAggregation();
     }
 
     private void BoundaryTest(string filePath, long startOfBoundary, long endOfBoundary)
     {
         using FileStream fileStream = File.OpenRead(filePath);
-        const int sectionWidth = 3;
         
         fileStream.Position = startOfBoundary;
         char firstByte = (char)fileStream.ReadByte();
@@ -137,6 +134,12 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
         do
         {
             readByte = stream.ReadByte();
+
+            if (readByte == -1)
+            {
+                Console.WriteLine("End of file reached while searching for seperator. This should not happen.");
+                break;
+            }
         } while (readByte != seperator);
     }
 
@@ -150,10 +153,13 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
         }).ToList();
     }
 
-    private static void AggregateRows(IEnumerable<(string, int)> rows, int taskId)
+    private static void AggregateRows(IEnumerable<(string, int)> rows, int taskId, long rowCount)
     {
         _semaphore.Wait();
 
+        long i = 0;
+        // CurrentThreadState[taskId] = new() { LinesProcessedSoFar = 0, LinesToProcess = rowCount };
+        
         try
         {
             foreach ((string? cityName, int temperature) in rows)
@@ -189,10 +195,12 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
                 Interlocked.Increment(ref aggregatedDataPoint.AmountOfDataPoints);
 
                 Interlocked.Increment(ref _linesProcessed);
+                i++;
 
                 if (_linesProcessed % 1_000_000 == 0)
                 {
                     Console.Write($"\rAggregated {_linesProcessed:N0} rows");
+                    // CurrentThreadState[taskId].LinesProcessedSoFar = i;
                 }
             }
         }
@@ -202,10 +210,30 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
         }
     }
 
-    private static IEnumerable<ValueTuple<string, int>> ReadRowsFromFile(string filePath, int start, int end)
-    {
-        foreach (string line in File.ReadLines(filePath).Skip(start).Take(end - start))
+    private static IEnumerable<ValueTuple<string, int>> ReadRowsFromFile(string filePath, long start, long end)
+    { 
+        using FileStream fileStream = File.OpenRead(filePath);
+        fileStream.Position = start;
+        long amountOfBytesToRead = end - start;
+        byte[] buffer = new byte[amountOfBytesToRead];
+        int read = fileStream.Read(buffer);
+        using MemoryStream memoryStream = new(buffer);
+        if (read == 0) throw new("Reached end of file. Shouldn't happen.");
+        using StreamReader reader = new(memoryStream);
+
+        int i = 0;
+
+        string? line = "";
+        do
         {
+            line = reader.ReadLine();
+            i++;
+            Console.Write($"\rReading line {i:N0}");
+            
+            if (fileStream.Position > end)
+            {
+                break;
+            }
             ReadOnlySpan<char> lineAsSpan = line.AsSpan();
             int indexOfSeparator = lineAsSpan.IndexOf(';');
 
@@ -213,7 +241,10 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
             ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
             decimal temperature = decimal.Parse(temperatureSpan, CultureInfo.InvariantCulture) * 100;
             yield return (cityNameSpan.ToString(), (int)temperature);
-        }
+        } while (line != null);
+
+        Console.WriteLine("Done reading. Press a key");
+        Console.ReadKey();
     }
 }
 public class Block
