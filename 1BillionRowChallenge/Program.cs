@@ -1,6 +1,8 @@
-﻿using _1BillionRowChallenge.Helpers;
+﻿using System.Timers;
+using _1BillionRowChallenge.Helpers;
 using _1BillionRowChallenge.Interfaces;
 using _1BillionRowChallenge.Models;
+using _1BillionRowChallenge.Presenters;
 using _1BillionRowChallenge.Processors;
 
 namespace _1BillionRowChallenge;
@@ -28,13 +30,29 @@ public class Program
             long executionTime = await BenchmarkProcessorAsync(processor, rowCount, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000, value);
             decimal executionTimeInSeconds = executionTime / 1000m;
             decimal rowsPerSecond = Math.Round(rowCount / executionTimeInSeconds / 1_000_000, 2);
-            Console.WriteLine($"\r{value:N0} threads = {rowsPerSecond:N2}M                         ");
+            ConcurrentConsoleHelperDecorator.WriteLine($"\r{value:N0} threads = {rowsPerSecond:N2}M                         ");
         }
     }
 
     private static async Task Test1B(IDataStreamProcessorV5 processor)
     {
+        System.Timers.Timer progressUpdater = new(TimeSpan.FromMilliseconds(500));
+        progressUpdater.Start();
+        progressUpdater.Elapsed += UpdateThreadProgress;
         await BenchmarkProcessorAsync(processor, 1_000_000_000, FilePathConstants.Measurements1_000_000_000, CorrectHashes.Measurements1_000_000_000);
+    }
+
+    private static void UpdateThreadProgress(object? sender, ElapsedEventArgs e)
+    {
+        int i = 0;
+        foreach (Guid threadId in DataStreamProcessorV6.CurrentThreadState.Keys)
+        {
+            ThreadProgressState state = DataStreamProcessorV6.CurrentThreadState[threadId];
+            decimal percent = state.LinesProcessedSoFar / (decimal)state.LinesToProcess;
+            ConcurrentConsoleHelperDecorator.ColoredWriteLine($"[Thread {threadId}] {percent:P0}      (lines: {state.LinesProcessedSoFar:N0}/{state.LinesToProcess:N0}, " +
+                                                                                                     $"bytes: {state.BytesReadSoFar:N0}/{state.BytesToRead:N0}, " +
+                                                                                                     $"rows per sec: {state.LinesProcessedSoFar/state.Stopwatch.Elapsed.TotalSeconds:N0})", state.IsFinished ? ConsoleColor.Green : ConsoleColor.Yellow, 0, i++);
+        }
     }
 
     private static async Task CalculateProcessingRate(IDataStreamProcessorV5 processor)
@@ -49,7 +67,7 @@ public class Program
             timings.Add(rowsPerSecond);
         }
 
-        Console.WriteLine($"\nExecution stats: Min: {timings.Min():N0}ms, Max: {timings.Max():N0}ms, Avg: {timings.Average():N0}ms");
+        ConcurrentConsoleHelperDecorator.WriteLine($"\nExecution stats: Min: {timings.Min():N0}ms, Max: {timings.Max():N0}ms, Avg: {timings.Average():N0}ms");
     }
 
     private static async Task TestAllBelow1BAsync(IDataStreamProcessorV5 processor)
@@ -68,24 +86,24 @@ public class Program
         {
             processedData = await processor.ProcessData(filePath, rowCount, amountOfTasksInTotal);
         }, rowCount);
-        // IPresenterV4 presenter = new PresenterV4();
-        // string result = presenter.BuildResultString(processedData);
+        IPresenterV4 presenter = new PresenterV4();
+        string result = presenter.BuildResultString(processedData);
         
-        // if (Hasher.Hash(result) == correctHash)
-        // {
-        //     Console.WriteLine("Correct!");
-        // }
-        // else
-        // {
-        //     Console.ForegroundColor = ConsoleColor.Red;
-        //     Console.WriteLine("Incorrect!");
-        //     Console.WriteLine(Hasher.Hash(result));
-        //     Console.ResetColor();
-        //     
-        //     string debug = File.ReadAllText($@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-{rowCount.ToString("N0").Replace(".", "_")}.out").Trim();
-        //     // Console.WriteLine($"You should have:\n{debug}");
-        //     // Console.WriteLine($"You have:\n{result}");
-        // }
+        if (Hasher.Hash(result) == correctHash)
+        {
+            ConcurrentConsoleHelperDecorator.WriteLine("Correct!");
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            ConcurrentConsoleHelperDecorator.WriteLine("Incorrect!");
+            ConcurrentConsoleHelperDecorator.WriteLine(Hasher.Hash(result));
+            Console.ResetColor();
+            
+            string debug = File.ReadAllText($@"C:\Users\Googlelai\Desktop\Nerd\1b-rows-challenge\1brc.data\measurements-{rowCount.ToString("N0").Replace(".", "_")}.out").Trim();
+            // ConsoleHelper.WriteLine($"You should have:\n{debug}");
+            // ConsoleHelper.WriteLine($"You have:\n{result}");
+        }
 
         return executionTime;
     }
