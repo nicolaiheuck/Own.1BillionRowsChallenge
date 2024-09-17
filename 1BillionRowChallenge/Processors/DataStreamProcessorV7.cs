@@ -8,7 +8,9 @@ using _1BillionRowChallenge.Models;
 namespace _1BillionRowChallenge.Processors;
 
 /// <summary>
-/// Changes form V5:
+/// Changes form V6:
+///   - Hopefully:
+///     - Better single core performance
 /// 
 /// Benchmarks:
 /// | File Size     | Execution Time | Rows per Second                                   |
@@ -25,7 +27,7 @@ namespace _1BillionRowChallenge.Processors;
 //NH_TODO: For next versions
 // - Try to maximize single thread performance and see how it scales
 // - Split last block into 10 blocks and process them in parallel
-public class DataStreamProcessorV6 : IDataStreamProcessorV5
+public class DataStreamProcessorV7 : IDataStreamProcessorV5
 {
     private static int _linesProcessed;
     private static ConcurrentDictionary<string, AggregatedDataPointV5> _result = new();
@@ -35,7 +37,7 @@ public class DataStreamProcessorV6 : IDataStreamProcessorV5
     
     public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount, int? amountOfTasksInTotalOverwrite = null)
     {
-        const int amountOfTasksToRunInParallel = 6;
+        const int amountOfTasksToRunInParallel = 1;
         _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
         _linesProcessed = 0;
         _result = new();
