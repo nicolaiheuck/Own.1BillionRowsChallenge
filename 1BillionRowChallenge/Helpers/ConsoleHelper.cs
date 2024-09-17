@@ -11,19 +11,19 @@ public static class ConsoleHelper
         }
     }
     
-    public static void ColoredWriteLine(string text, ConsoleColor color, int left = 0, int top = 0)
+    public static void ColoredWriteLine(string text, ConsoleColor color, int? left = null, int? top = null)
     {
         lock (_consoleLock)
         {
             int originalLeft = Console.CursorLeft;
             int originalTop = Console.CursorTop;
-            Console.SetCursorPosition(left, top);
+            Console.SetCursorPosition(left ?? originalLeft, top ?? originalTop);
             Console.ForegroundColor = color;
 
             Console.WriteLine(text);
         
             Console.ResetColor();
-            Console.SetCursorPosition(originalLeft, originalTop);
+            Console.SetCursorPosition(originalLeft, originalTop + 1);
         }
     }
     

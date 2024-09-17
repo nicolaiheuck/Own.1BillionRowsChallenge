@@ -7,6 +7,8 @@ public class FileSplitter
 {
     public static List<Block> SplitFileIntoBlocks(string filePath, int blockCount, long offset = 0)
     {
+        if (blockCount == 1) return [new() { Start = offset, End = new FileInfo(filePath).Length }];
+        
         FileInfo fileInfo = new(filePath);
         using FileStream fileStream = File.OpenRead(filePath);
         using StreamReader reader = new(fileStream);
@@ -42,7 +44,7 @@ public class FileSplitter
 
             if (readByte == -1)
             {
-                ConsoleHelper.WriteLine("End of file reached while searching for seperator. This should not happen.");
+                Console.WriteLine("End of file reached while searching for seperator. This should not happen.");
                 break;
             }
         } while (readByte != seperator);
