@@ -45,14 +45,16 @@ public class ProgressHelper
     private static void UpdateThreadProgress(object? sender, ElapsedEventArgs e)
     {
         if (Disabled) return;
+        Console.WriteLine($"Progress: {DataStreamProcessorV7.LinesProcessed:N0}");
         // int i = 0;
         // foreach ((var taskId, ThreadProgressState? state) in DataStreamProcessorV7.CurrentThreadState.ToList().OrderByDescending(s => s.Value.IsFinished).ThenByDescending(s => s.Value.LinesProcessedSoFar > 0))
         // {
         //     ConsoleColor consoleColor = GetColorForState(state);
         //     decimal percent = state.LinesProcessedSoFar / (decimal)state.LinesToProcess;
-        //     ConsoleHelper.ColoredWriteLine($"[Thread {taskId}] {percent:P0}      (lines: {state.LinesProcessedSoFar:N0}/{state.LinesToProcess:N0}, " +
-        //                                    $"bytes: {state.BytesReadSoFar:N0}/{state.BytesToRead:N0}, " +
-        //                                    $"rows per sec: {state.LinesProcessedSoFar/state.Stopwatch.Elapsed.TotalSeconds:N0})                 ", consoleColor, 0, i++);
+        //     ConsoleHelper.ColoredWriteLine($"Threads: {DataStreamProcessorV7.CurrentThreadState.Count}", ConsoleColor.Green, 0, 0);
+        //     // ConsoleHelper.ColoredWriteLine($"[Thread {taskId}] {percent:P0}      (lines: {state.LinesProcessedSoFar:N0}/{state.LinesToProcess:N0}, " +
+        //     //                                $"bytes: {state.BytesReadSoFar:N0}/{state.BytesToRead:N0}, " +
+        //     //                                $"rows per sec: {state.LinesProcessedSoFar/state.Stopwatch.Elapsed.TotalSeconds:N0})                 ", consoleColor, 0, i++);
         // }
         //
         // var rowsPerSec = DataStreamProcessorV7.CurrentThreadState.Values.Sum(s => s.LinesProcessedSoFar) / _startOfExecution.Elapsed.TotalSeconds;

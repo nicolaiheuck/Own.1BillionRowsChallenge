@@ -6,6 +6,7 @@
         <RootNamespace>_1BillionRowChallenge</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 <!--        <PublishAot>true</PublishAot>-->
     </PropertyGroup>
 

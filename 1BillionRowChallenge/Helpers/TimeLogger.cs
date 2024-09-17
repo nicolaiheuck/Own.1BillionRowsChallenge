@@ -31,7 +31,7 @@ public static class TimeLogger
         finally
         {
             watch.Stop();
-            // Console.WriteLine($"Execution time for \"{description}\" in {watch.ElapsedMilliseconds}ms ({rowCount/watch.Elapsed.TotalSeconds:N0} rows/sec)");
+            Console.WriteLine($"Execution time for \"{description}\" in {watch.ElapsedMilliseconds}ms ({rowCount/watch.Elapsed.TotalSeconds:N0} rows/sec)");
         }
         return watch.ElapsedMilliseconds;
     }
