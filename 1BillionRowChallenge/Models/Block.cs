@@ -2,7 +2,7 @@
 
 public class Block
 {
-    private static int _globalId = 0;
+    public static int GlobalId = 0;
     
     public int Id { get; set; }
     
@@ -17,6 +17,6 @@ public class Block
 
     public Block()
     {
-        Id = Interlocked.Increment(ref _globalId);
+        Id = Interlocked.Increment(ref GlobalId);
     }
 }

@@ -25,12 +25,15 @@ public class Program
 
     private static async Task StartAsync(string[] args)
     {
-        ProgressHelper.Disabled = true;
         IDataStreamProcessorV5 processor = new DataStreamProcessorV7();
+        // await BenchmarkRunner.CalculateProcessingRate(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000));
         // await BenchmarkRunner.BenchmarkBestTaskLimit(400, 500, 10, processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000));
-        // await BenchmarkRunner.CalculateProcessingRate(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000, 10_000_000));
         // await BenchmarkRunner.BenchmarkRowsPerTask(processor);
         // await BenchmarkRunner.TestAllBelow1BAsync(processor);
+        
+        ProgressHelper.Disabled = true;
+        await BenchmarkRunner.PerformWarmupAsync(processor);
+        // ProgressHelper.Disabled = false;
         await BenchmarkRunner.Test1B(processor);
     }
 

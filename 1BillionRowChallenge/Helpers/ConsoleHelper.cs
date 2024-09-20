@@ -25,7 +25,7 @@ public static class ConsoleHelper
                 Console.WriteLine(text);
                 Console.ResetColor();
                 
-                Console.SetCursorPosition(originalLeft, originalTop + 1);
+                Console.SetCursorPosition(originalLeft, originalTop >= Console.WindowHeight - 1 ? originalTop : originalTop + 1);
             }
             else
             {

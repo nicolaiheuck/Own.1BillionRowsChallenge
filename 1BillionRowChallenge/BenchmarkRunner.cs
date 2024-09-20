@@ -12,26 +12,26 @@ public static class BenchmarkRunner
 
     public static async Task BenchmarkBestTaskLimit(int from, int to, int incrementPerStep, IDataStreamProcessorV5 processor, BenchmarkConfiguration configuration)
     {
-        await PerformWarmupAsync(processor, configuration);
+        await PerformWarmupAsync(processor);
         List<(int numberOfTasks, decimal result)> results = [];
         for (int i = from; i <= to; i += incrementPerStep)
         {
             decimal result = await CalculateProcessingRate(processor, configuration, taskLimit: i);
             results.Add((i, result));
-            Console.Clear();
+            // Console.Clear();
             PrintResultsOnRightSideOfTerminal(results);
         }
 
         PrintResults(results);
     }
 
-    private static async Task PerformWarmupAsync(IDataStreamProcessorV5 processor, BenchmarkConfiguration configuration)
+    public static async Task PerformWarmupAsync(IDataStreamProcessorV5 processor)
     {
         Console.WriteLine("Warming up...");
         for (int i = 0; i < 5; i++)
         {
             Console.Write($"\rWarmup round {i + 1}...");
-            await BenchmarkProcessorAsync(processor, configuration);
+            await BenchmarkProcessorAsync(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000));
         }
 
         Console.Clear();
@@ -55,7 +55,7 @@ public static class BenchmarkRunner
 
     private static void PrintResults(List<(int numberOfTasks, decimal result)> results)
     {
-        Console.Clear();
+        // Console.Clear();
         Console.WriteLine("Results for best task limit:");
         foreach ((int i, decimal result) in results)
         {
@@ -86,7 +86,7 @@ public static class BenchmarkRunner
 
     public static async Task<decimal> CalculateProcessingRate(IDataStreamProcessorV5 processor, BenchmarkConfiguration configuration, int? rowCount = null, int? taskLimit = null)
     {
-        await PerformWarmupAsync(processor, configuration);
+        await PerformWarmupAsync(processor);
         if (rowCount != null) configuration.RowCount = rowCount.Value;
         List<decimal> timings = [];
         for (int i = 0; i < 10; i++)
