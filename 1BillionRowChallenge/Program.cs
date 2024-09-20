@@ -11,25 +11,24 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        // int currentlyZeroNeedsToBeNegativeOne = 0 - 1 | 0b1;
-        // int currentlyOneNeedsToBeOne = 1 - 1 | 0b1;
-        
-        // EnsureDecimalParserWorks();
-        // EnsureDecimalParserWorksWithoutDivision();
-        // EnsureIntParserWorks();
+        Stopwatch programStopWatch = Stopwatch.StartNew();
+        try
+        {
+            await StartAsync(args);
+        }
+        finally
+        {
+            programStopWatch.Stop();
+            Console.WriteLine($"\nProgram finished in {programStopWatch.Elapsed.TotalSeconds:N1}s");
+        }
+    }
 
-        // Console.WriteLine("Tests passed");
-        
-        // DecimalParsingBenchmark.ParseDecimalUsingOwnDecimalParser();
-        // Stopwatch stopwatch = Stopwatch.StartNew();
-        // BenchmarkDotNet.Running.BenchmarkRunner.Run<DecimalParsingBenchmark>();
-        // stopwatch.Stop();
-        // Console.WriteLine($"\n\nBenchmark took: {stopwatch.Elapsed.TotalSeconds}s");
-
+    private static async Task StartAsync(string[] args)
+    {
         ProgressHelper.Disabled = true;
         IDataStreamProcessorV5 processor = new DataStreamProcessorV7();
+        // await BenchmarkRunner.BenchmarkBestTaskLimit(400, 500, 10, processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000));
         // await BenchmarkRunner.CalculateProcessingRate(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000, 10_000_000));
-        // await BenchmarkRunner.CalculateProcessingRate(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements1_000_000_000, 10_000_000));
         // await BenchmarkRunner.BenchmarkRowsPerTask(processor);
         // await BenchmarkRunner.TestAllBelow1BAsync(processor);
         await BenchmarkRunner.Test1B(processor);

@@ -15,15 +15,24 @@ public static class ConsoleHelper
     {
         lock (_consoleLock)
         {
-            int originalLeft = Console.CursorLeft;
-            int originalTop = Console.CursorTop;
-            Console.SetCursorPosition(left ?? originalLeft, top ?? originalTop);
-            Console.ForegroundColor = color;
-
-            Console.WriteLine(text);
-        
-            Console.ResetColor();
-            Console.SetCursorPosition(originalLeft, originalTop + 1);
+            if (left != null && top != null)
+            {
+                int originalLeft = Console.CursorLeft;
+                int originalTop = Console.CursorTop;
+                Console.SetCursorPosition(left.Value, top.Value);
+                
+                Console.ForegroundColor = color;
+                Console.WriteLine(text);
+                Console.ResetColor();
+                
+                Console.SetCursorPosition(originalLeft, originalTop + 1);
+            }
+            else
+            {
+                Console.ForegroundColor = color;
+                Console.WriteLine(text);
+                Console.ResetColor();
+            }
         }
     }
     

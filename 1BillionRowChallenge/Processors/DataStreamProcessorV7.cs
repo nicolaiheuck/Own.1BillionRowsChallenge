@@ -33,24 +33,28 @@ public class DataStreamProcessorV7 : IDataStreamProcessorV5
 {
     private static ConcurrentDictionary<string, AggregatedDataPointV5> _result = new();
     // public static ConcurrentDictionary<int, ThreadProgressState> CurrentThreadState = new(); // Cost: 236K
-    public static long LinesProcessed = 0;
+    private long LinesProcessed = 0;
     private static SemaphoreSlim _semaphore = null!; // Cost: 0
     private static List<Block> _blocks = [];
     
     public async Task<List<ResultRowV4>> ProcessData(string filePath, long rowCount, int? amountOfTasksInTotalOverwrite = null)
     {
-        const int amountOfTasksToRunInParallel = 60000;
+        EnsureFileExists(filePath);
+        int amountOfTasksToRunInParallel = GetAmountOfTasksToRunInParallel(amountOfTasksInTotalOverwrite);
         _semaphore = new(amountOfTasksToRunInParallel, amountOfTasksToRunInParallel);
         _result = new();
+        LinesProcessed = 0;
       //  CurrentThreadState = new();
 
         _blocks = FileSplitter.SplitFileIntoBlocks(filePath, amountOfTasksToRunInParallel);
         using MemoryMappedFile memoryMappedFile = MemoryMappedFile.CreateFromFile(filePath);
         List<Task> tasks = [];
 
-        await Parallel.ForEachAsync(_blocks, async (block, cancellationToken) => // 44s with. Not sure if it helps or not
+        await Parallel.ForEachAsync(_blocks, new ParallelOptions { MaxDegreeOfParallelism = amountOfTasksToRunInParallel }, async (block, cancellationToken) => // 44s with. Not sure if it helps or not
         {
-          //  CurrentThreadState[block.Id] = new() { LinesToProcess = rowCount / _blocks.Count, BytesToRead = block.End - block.Start };
+            // await _semaphore.WaitAsync(cancellationToken);
+            Console.Write($"\rLines: {LinesProcessed:N0}");
+            //  CurrentThreadState[block.Id] = new() { LinesToProcess = rowCount / _blocks.Count, BytesToRead = block.End - block.Start };
             using MemoryMappedViewStream viewStream = memoryMappedFile.CreateViewStream(block.Start, block.End - block.Start, MemoryMappedFileAccess.Read);
             IEnumerable<(string, int)> rows = ReadRowsFromFile(viewStream, block);
             await AggregateRows(rows, block.Id);
@@ -79,7 +83,23 @@ public class DataStreamProcessorV7 : IDataStreamProcessorV5
         return SecondLayerAggregation();
     }
 
-    private static async Task AggregateRows(IEnumerable<(string, int)> rows, int taskId)
+    private static void EnsureFileExists(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("File not found", filePath);
+        }
+    }
+
+    private int GetAmountOfTasksToRunInParallel(int? amountOfTasksInTotalOverwrite)
+    {
+        // return 60_000; // 10.9M
+        // return 6_000; // 18.8M
+        // return amountOfTasksInTotalOverwrite ?? 6_000;
+        return 500;
+    }
+
+    private async Task AggregateRows(IEnumerable<(string, int)> rows, int taskId)
     {
         await _semaphore.WaitAsync();
 
