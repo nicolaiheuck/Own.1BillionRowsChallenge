@@ -46,15 +46,30 @@ public class DataStreamProcessorV7 : IDataStreamProcessorV5
 
         _blocks = FileSplitter.SplitFileIntoBlocks(filePath, amountOfTasksToRunInParallel);
         using MemoryMappedFile memoryMappedFile = MemoryMappedFile.CreateFromFile(filePath);
+        List<Task> tasks = new();
 
-        await Parallel.ForEachAsync(_blocks, new ParallelOptions { MaxDegreeOfParallelism = amountOfTasksToRunInParallel }, async (block, _) => // 44s with. Not sure if it helps or not
+        List<MemoryMappedViewStream> viewStreams = new();
+        foreach (var block in _blocks)
         {
-            // Console.Write($"\rLines: {LinesProcessed:N0}");
-            //CurrentThreadState[block.Id] = new() { LinesToProcess = rowCount / _blocks.Count, BytesToRead = block.End - block.Start };
-            using MemoryMappedViewStream viewStream = memoryMappedFile.CreateViewStream(block.Start, block.End - block.Start, MemoryMappedFileAccess.Read);
-            IEnumerable<(string, int)> rows = ReadRowsFromFile(viewStream, block);
-            await AggregateRows(rows, block.Id);
-        });
+            tasks.Add(Task.Run(async () =>
+            {
+                try
+                {
+                    MemoryMappedViewStream viewStream = memoryMappedFile.CreateViewStream(block.Start, block.End - block.Start, MemoryMappedFileAccess.Read);
+                    viewStreams.Add(viewStream);
+                    IEnumerable<(string, int)> rows = ReadRowsFromFile(viewStream, block);
+                    await AggregateRows(rows, block.Id);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error processing block {block.Id}: {ex.Message}");
+                    Console.ReadKey();
+                }
+            }));
+        }
+
+        await Task.WhenAll(tasks);
+        viewStreams.ForEach(viewStream => viewStream.Dispose());
         
         return SecondLayerAggregation();
     }
@@ -165,19 +180,7 @@ public class DataStreamProcessorV7 : IDataStreamProcessorV5
 
     private int GetAmountOfTasksToRunInParallel(int? amountOfTasksInTotalOverwrite)
     {
-        // return 60_000; // 10.9M
-        // return 6_000; // 18.8M
-        // return amountOfTasksInTotalOverwrite ?? 6_000;
-        // return 500; // 15.7M
-        // return 24; // 16.6M for 1B
-        // return 12; // 17.8M for 1B
-        
-        // Without progressbar
-        // return 100; // 14.8M for 1B
-        // return 6; // 15.98M for 1B
-        // return 12; // 19.54M for 1B (without semaphore) (17M with semaphore)
-        // return 20; // 17.38M for 1B
-        // return 24; // 17.56M for 1B
+        // return 1; // Debugging
         
         // AOT
         // return 12; // 24M for 1B
@@ -187,6 +190,6 @@ public class DataStreamProcessorV7 : IDataStreamProcessorV5
         // return 10; // 23.1M, 23.7M
         // return 9; // 23M for 1B
         // return 8; // 22M
-        return 12; // 25.4M
+        return 12; // Best
     }
 }

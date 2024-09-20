@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO.MemoryMappedFiles;
 using _1BillionRowChallenge.Benchmarks;
 using _1BillionRowChallenge.Helpers;
 using _1BillionRowChallenge.Interfaces;
@@ -26,15 +27,14 @@ public class Program
     private static async Task StartAsync(string[] args)
     {
         IDataStreamProcessorV5 processor = new DataStreamProcessorV7();
-        // await BenchmarkRunner.CalculateProcessingRate(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000));
+        await BenchmarkRunner.CalculateProcessingRate(processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000));
         // await BenchmarkRunner.BenchmarkBestTaskLimit(400, 500, 10, processor, BenchmarkConfigurationFactory.Create(BenchmarkType.Measurements10_000_000));
         // await BenchmarkRunner.BenchmarkRowsPerTask(processor);
         // await BenchmarkRunner.TestAllBelow1BAsync(processor);
         
-        ProgressHelper.Disabled = true;
-        await BenchmarkRunner.PerformWarmupAsync(processor);
-        // ProgressHelper.Disabled = false;
-        await BenchmarkRunner.Test1B(processor);
+        // ProgressHelper.Disabled = true;
+        // await BenchmarkRunner.PerformWarmupAsync(processor);
+        // await BenchmarkRunner.Test1B(processor);
     }
 
     private static void EnsureDecimalParserWorksWithoutDivision()
