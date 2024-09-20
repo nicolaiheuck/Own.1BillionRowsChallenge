@@ -21,7 +21,7 @@ namespace _1BillionRowChallenge.Processors;
 /// | 100,000       | __ ms          |                                                   |
 /// | 1,000,000     | ___ ms         |                                                   |
 /// | 10,000,000    | ____ ms        |                                                   |
-/// | 1,000,000,000 | ______ ms      |  _________ (43s AOT)                              |
+/// | 1,000,000,000 | ______ ms      |  _________ (40.6s AOT)                              |
 /// Only 20 MB of memory
 /// 22.2M rows a second (24M using AOT!!!)
 /// </summary>
@@ -92,7 +92,7 @@ public class DataStreamProcessorV8 : IDataStreamProcessorV5
         return Task.FromResult(SecondLayerAggregation());
     }
 
-    private Task ProcessChunk(MemoryMappedFile memoryMappedFile, TestBlock[] chunk)
+    private unsafe Task ProcessChunk(MemoryMappedFile memoryMappedFile, TestBlock[] chunk)
     {
         foreach (TestBlock block in chunk)
         {
@@ -107,50 +107,68 @@ public class DataStreamProcessorV8 : IDataStreamProcessorV5
                 
                 ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
                 ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
-                decimal temperature = MyDecimalParserV9(temperatureSpan.ToString());
-                AggregateRow((cityNameSpan.ToString(), (int)temperature));
-            
-                line = reader.ReadLine();
+                
+                fixed (char* linePointer = temperatureSpan)
+                {
+                    char* readingByte = linePointer;
+                    bool isNegative = *readingByte == '-';
+        
+                    int isNegativityMultiplier = 1;
+                    if (isNegative)
+                    {
+                        isNegativityMultiplier = -1;
+                        readingByte++;
+                    }
+                    int result = 0;
+                    while (*readingByte != '.')
+                    {
+                        result = result * 10 + (*readingByte - '0');
+                        readingByte++;
+                    }
+        
+                    result *= 10;
+                    readingByte++;
+                    int afterDot = *readingByte - '0';
+        
+                    int temperature = (result + afterDot) * isNegativityMultiplier;
+                    AggregatedDataPointV5 aggregatedDataPoint;
+                    string cityName = cityNameSpan.ToString();
+                    
+                    if (_result.TryGetValue(cityName, out AggregatedDataPointV5? value))
+                    {
+                        aggregatedDataPoint = value;
+                    }
+                    else
+                    {
+                        aggregatedDataPoint = new()
+                        {
+                            Min = int.MaxValue,
+                            Max = int.MinValue,
+                        };
+
+                        _result[cityName] = aggregatedDataPoint;
+                    }
+
+                    if (temperature < aggregatedDataPoint.Min)
+                    {
+                        aggregatedDataPoint.Min = temperature;
+                    }
+
+                    if (temperature > aggregatedDataPoint.Max)
+                    {
+                        aggregatedDataPoint.Max = temperature;
+                    }
+
+                    Interlocked.Add(ref aggregatedDataPoint.Sum, temperature);
+                    Interlocked.Increment(ref aggregatedDataPoint.AmountOfDataPoints);
+                    Interlocked.Increment(ref LinesProcessed);
+                
+                    line = reader.ReadLine();
+                }
             } while (line != null);
         }
 
         return Task.CompletedTask;
-    }
-
-
-    // [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AggregateRow((string cityName, int temperature) row)
-    {
-        AggregatedDataPointV5 aggregatedDataPoint;
-
-        if (_result.TryGetValue(row.cityName, out AggregatedDataPointV5? value))
-        {
-            aggregatedDataPoint = value;
-        }
-        else
-        {
-            aggregatedDataPoint = new()
-            {
-                Min = int.MaxValue,
-                Max = int.MinValue,
-            };
-
-            _result[row.cityName] = aggregatedDataPoint;
-        }
-
-        if (row.temperature < aggregatedDataPoint.Min)
-        {
-            aggregatedDataPoint.Min = row.temperature;
-        }
-
-        if (row.temperature > aggregatedDataPoint.Max)
-        {
-            aggregatedDataPoint.Max = row.temperature;
-        }
-
-        Interlocked.Add(ref aggregatedDataPoint.Sum, row.temperature);
-        Interlocked.Increment(ref aggregatedDataPoint.AmountOfDataPoints);
-        Interlocked.Increment(ref LinesProcessed);
     }
 
     private static List<ResultRowV4> SecondLayerAggregation()
@@ -161,27 +179,6 @@ public class DataStreamProcessorV8 : IDataStreamProcessorV5
             Max = keyPair.Value.Max / 10,
             Mean = ((decimal)keyPair.Value.Sum / 10) / keyPair.Value.AmountOfDataPoints
         }).ToList();
-    }
-
-    private static IEnumerable<(string, int)> ReadRowsFromFile(MemoryMappedViewStream viewStream, Block block)
-    {
-        //CurrentThreadState[block.Id].Stopwatch.Start();
-        using StreamReader reader = new(viewStream);
-        
-        string? line = reader.ReadLine();
-        do
-        {
-            //CurrentThreadState[block.Id].BytesReadSoFar += line?.Length ?? 0;
-
-            ReadOnlySpan<char> lineAsSpan = line.AsSpan();
-            int indexOfSeparator = lineAsSpan.IndexOf(';');
-
-            ReadOnlySpan<char> cityNameSpan = lineAsSpan.Slice(0, indexOfSeparator);
-            ReadOnlySpan<char> temperatureSpan = lineAsSpan.Slice(indexOfSeparator + 1);
-            decimal temperature = MyDecimalParserV9(temperatureSpan.ToString());
-            yield return (cityNameSpan.ToString(), (int)temperature);
-            line = reader.ReadLine();
-        } while (line != null);
     }
 
     /// <summary>

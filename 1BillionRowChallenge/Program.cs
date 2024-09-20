@@ -127,6 +127,8 @@ public class Program
         
         ProgressHelper.Disabled = true;
         await BenchmarkRunner.PerformWarmupAsync(processor);
+        await BenchmarkRunner.PerformWarmupAsync(processor);
+        await BenchmarkRunner.PerformWarmupAsync(processor);
         ProgressHelper.Disabled = false;
         await BenchmarkRunner.Test1B(processor);
     }
