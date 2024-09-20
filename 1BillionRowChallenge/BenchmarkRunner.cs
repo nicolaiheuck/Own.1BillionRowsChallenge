@@ -86,7 +86,7 @@ public static class BenchmarkRunner
 
     public static async Task<decimal> CalculateProcessingRate(IDataStreamProcessorV5 processor, BenchmarkConfiguration configuration, int? rowCount = null, int? taskLimit = null)
     {
-        await PerformWarmupAsync(processor);
+        // await PerformWarmupAsync(processor);
         if (rowCount != null) configuration.RowCount = rowCount.Value;
         List<decimal> timings = [];
         for (int i = 0; i < 10; i++)

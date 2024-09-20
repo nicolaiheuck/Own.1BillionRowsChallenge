@@ -33,6 +33,35 @@ public class FileSplitter
         }
         return blocks;
     }
+    
+    public static List<TestBlock> SplitFileIntoTestBlocks(string filePath, int blockCount, long offset = 0)
+    {
+        if (blockCount == 1) return [new() { Start = offset, End = new FileInfo(filePath).Length }];
+        
+        FileInfo fileInfo = new(filePath);
+        using FileStream fileStream = File.OpenRead(filePath);
+        using StreamReader reader = new(fileStream);
+        List<TestBlock> blocks = [];
+        
+        long blockSize = (fileInfo.Length - offset) / blockCount;
+        const char seperator = '\n';
+        for (int i = 0; i < blockCount; i++)
+        {
+            long start = i * blockSize + offset;
+            TestBlock? lastBlock = blocks.LastOrDefault();
+
+            if (lastBlock != null && lastBlock.Value.End > start)
+            {
+                start = lastBlock.Value.End;
+            }
+            long end = (i + 1) * blockSize + offset;
+            fileStream.Position = end;
+            ReadToNextSeperator(seperator, fileStream);
+            end = fileStream.Position;
+            blocks.Add(new() { Start = start, End = end });
+        }
+        return blocks;
+    }
 
     private static void ReadToNextSeperator(char seperator, FileStream stream)
     {

@@ -45,7 +45,7 @@ public class ProgressHelper
     private static void UpdateThreadProgress(object? sender, ElapsedEventArgs e)
     {
         if (Disabled) return;
-        // Console.WriteLine($"Progress: {DataStreamProcessorV7.LinesProcessed:N0}");
+        Console.Write($"\rProgress: {DataStreamProcessorV8.LinesProcessed:N0} ({DataStreamProcessorV8.LinesProcessed/_startOfExecution.Elapsed.TotalSeconds:N0} rows per sec, for {_startOfExecution.Elapsed.TotalSeconds:N0}s)");
         // int i = 0;
         // foreach ((var taskId, ThreadProgressState? state) in DataStreamProcessorV7.CurrentThreadState.ToList().OrderByDescending(s => s.Value.IsFinished).ThenByDescending(s => s.Value.LinesProcessedSoFar > 0))
         // {

@@ -26,6 +26,7 @@ namespace _1BillionRowChallenge.Processors;
 /// 22.2M rows a second (24M using AOT!!!)
 /// </summary>
 //NH_TODO: For next versions
+// - Read file using pointers and unsafe
 // - Try to maximize single thread performance and see how it scales
 // - Split last block into 10 blocks and process them in parallel
 // - Try using .ReadLines().Parallel()
